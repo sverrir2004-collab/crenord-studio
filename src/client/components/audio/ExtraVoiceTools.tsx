@@ -842,3 +842,71 @@ export const AudioToVideoPanel: React.FC<{ onSubmitted?: () => void }> = ({ onSu
   );
 };
 
+
+// ---------- MOTION TRANSFER (Kling 3 Motion Control) ----------
+
+export const MotionTransferPanel: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitted }) => {
+  const [picture, setPicture] = useState<Uploaded | null>(null);
+  const [movie, setMovie] = useState<Uploaded | null>(null);
+  const [orientation, setOrientation] = useState<'image' | 'video'>('image');
+  const [keepSound, setKeepSound] = useState(true);
+  const [prompt, setPrompt] = useState('');
+  const { run, working, error, setError, job } = useRunner(onSubmitted);
+  const seconds = Math.max(1, Math.round(movie?.duration || 5));
+  const cost = 0.168 * seconds;
+
+  const start = () =>
+    run({
+      tool: 'video.edit',
+      modelKey: 'vedit_kling_v3_motion',
+      input: {
+        image_url: picture!.url,
+        video_url: movie!.url,
+        character_orientation: orientation,
+        keep_original_sound: keepSound,
+        duration: seconds,
+        ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
+      },
+    });
+
+  return (
+    <div className="space-y-4">
+      <Header title="Motion transfer" text="Make the person in your picture move exactly like the person in a video." />
+      <div className={cardCls}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FileSlot title="1. Character picture" accept="image/*" maxSizeMb={20} caption="Who should move" value={picture} onChange={setPicture} onError={setError} />
+          <FileSlot title="2. Movement video" accept="video/*" maxSizeMb={100} caption="The movement to copy (3 to 30 s)" value={movie} onChange={setMovie} onError={setError} />
+        </div>
+        <div>
+          <span className={labelCls}>Which way should the character face?</span>
+          <Segmented
+            value={orientation}
+            onChange={setOrientation}
+            options={[
+              { id: 'image', label: 'Follow the picture', note: 'Up to 10 s' },
+              { id: 'video', label: 'Follow the video', note: 'Up to 30 s' },
+            ]}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] cursor-pointer">
+          <input type="checkbox" checked={keepSound} onChange={(e) => setKeepSound(e.target.checked)} />
+          Keep the sound from the movement video
+        </label>
+        <div>
+          <span className={labelCls}>Extra description (optional)</span>
+          <textarea className={inputCls} rows={2} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="For example: in a bright kitchen" />
+        </div>
+      </div>
+      <Footer
+        label="Transfer the motion"
+        working={working}
+        disabled={!picture || !movie}
+        reason={!picture ? 'Upload the character picture' : 'Upload the movement video'}
+        cost={`Estimated cost: about $${cost.toFixed(2)}`}
+        error={error}
+        job={job}
+        onClick={start}
+      />
+    </div>
+  );
+};

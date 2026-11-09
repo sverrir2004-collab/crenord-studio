@@ -37,6 +37,7 @@ import { CostBanner } from '../components/ui/CostBanner.tsx';
 import { Badge } from '../components/ui/Badge.tsx';
 import { useReviewState } from '../lib/useReviewState.ts';
 import { fetchWithAuth } from '../lib/firebase.ts';
+import { MotionTransferPanel } from '../components/audio/ExtraVoiceTools.tsx';
 
 export interface VersionItem {
   id: string;
@@ -50,7 +51,7 @@ export interface VersionItem {
 }
 
 type ImageToolId = 'ai-edit' | 'bg-replace' | 'bg-remove' | 'upscale' | 'resize-ads';
-type VideoToolId = 'vedit' | 'extend' | 'vupscale' | 'trim' | 'reformat';
+type VideoToolId = 'motion' | 'vedit' | 'extend' | 'vupscale' | 'trim' | 'reformat';
 type ToolId = ImageToolId | VideoToolId;
 
 interface ToolConfig {
@@ -172,8 +173,8 @@ export const EditPage: React.FC = () => {
       name: 'Upscale',
       category: 'ai',
       help: '2x or 4x high-res boost',
-      badge: 'Pending',
-      badgeVariant: 'default',
+      badge: '~$0.05',
+      badgeVariant: 'accent',
       icon: <Maximize2 size={16} strokeWidth={1.75} />,
     },
     {
@@ -188,6 +189,15 @@ export const EditPage: React.FC = () => {
   ];
 
   const videoTools: ToolConfig[] = [
+    {
+      id: 'motion',
+      name: 'Motion transfer',
+      category: 'ai',
+      help: 'Make my character move like a video',
+      badge: '~$0.17/s',
+      badgeVariant: 'accent',
+      icon: <Film size={16} strokeWidth={1.75} />,
+    },
     {
       id: 'vedit',
       name: 'AI Video Edit',
@@ -1248,6 +1258,12 @@ export const EditPage: React.FC = () => {
           </div>
         </aside>
 
+        {activeTool === 'motion' ? (
+          <div className="lg:col-span-2">
+            <MotionTransferPanel />
+          </div>
+        ) : (
+          <>
         {/* ================= 2. CENTRE CANVAS ================= */}
         <div className="relative rounded-[var(--radius-cards)] border border-[var(--border-subtle)] overflow-hidden flex flex-col items-center justify-center p-4 bg-[var(--bg-1)] select-none min-h-[460px]">
           {/* Checkerboard Pattern */}
@@ -1828,6 +1844,8 @@ export const EditPage: React.FC = () => {
             </div>
           </div>
         </aside>
+          </>
+        )}
       </div>
 
       {/* ================= 4. VERSIONS STRIP AT THE BOTTOM ================= */}
