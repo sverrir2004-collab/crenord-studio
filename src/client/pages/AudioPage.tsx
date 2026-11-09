@@ -173,6 +173,7 @@ export const AudioPage: React.FC = () => {
   // Right Panel Tab: 'settings' or 'history'
   const [rightPanelTab, setRightPanelTab] = useState<'settings' | 'history'>('settings');
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'settings' | 'history'>('settings');
 
   // App & Generation State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1089,6 +1090,115 @@ export const AudioPage: React.FC = () => {
     fetchAudioFeed();
   };
 
+  const renderHistory = () => (
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          {audioItems.length === 0 ? (
+            <div className="p-8 text-center text-[var(--text-tertiary)] text-[12px]">
+              No audio generated yet. Your results will appear here automatically.
+            </div>
+          ) : (
+            audioItems.map((item) => {
+              const isPlaying = playingId === item.id;
+              const rating = feedbackRatings[item.id];
+
+              return (
+                <div
+                  key={item.id}
+                  className="p-3 bg-[var(--bg-2)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-[var(--radius-cards)] space-y-2.5 transition-all shadow-xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudio(item.url, item.id, item)}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                          isPlaying
+                            ? 'bg-[var(--accent)] text-white'
+                            : 'bg-[var(--bg-3)] text-[var(--text-primary)] hover:bg-[var(--accent)] hover:text-white'
+                        }`}
+                      >
+                        {isPlaying ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
+                      </button>
+
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold text-[var(--text-primary)] truncate">
+                          {item.title || item.metadata?.voice || 'Voice Track'}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                          {item.metadata?.voice ? `${item.metadata.voice} • ` : ''}
+                          {item.sourceTool || 'Audio'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 tabular-nums">
+                      {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {/* Action Bar */}
+                  <div className="flex items-center justify-between pt-1.5 border-t border-[var(--border-subtle)] text-[11px]">
+                    <div className="flex items-center gap-1">
+                      {/* Thumbs up / down */}
+                      <button
+                        type="button"
+                        onClick={() => handleFeedback(item.id, 'positive')}
+                        className={`p-1 rounded hover:bg-[var(--bg-3)] transition-colors cursor-pointer ${
+                          rating === 'positive' ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'
+                        }`}
+                      >
+                        <ThumbsUp size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFeedback(item.id, 'negative')}
+                        className={`p-1 rounded hover:bg-[var(--bg-3)] transition-colors cursor-pointer ${
+                          rating === 'negative' ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'
+                        }`}
+                      >
+                        <ThumbsDown size={12} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSoundModalTarget({
+                            isOpen: true,
+                            video: videoAssets[0] || null,
+                            audio: {
+                              url: item.url,
+                              type: item.tags?.includes('music') ? 'music' : item.tags?.includes('sfx') ? 'sfx' : 'voice',
+                              title: item.title,
+                            },
+                          });
+                        }}
+                        className="text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                      >
+                        <Film size={11} />
+                        <span>Use in video</span>
+                      </button>
+
+                      <a
+                        href={item.url}
+                        download={`crenord_${item.id}.mp3`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+                        title="Download"
+                      >
+                        <Download size={13} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+  );
+
   // Find active voice object
   const modelVoices = voicesForModel(ttsModelInfo(selectedModel).family);
   const activeVoiceObj = VOICES_CATALOG.find((v) => v.name === selectedVoice) || VOICES_CATALOG[0];
@@ -1141,7 +1251,21 @@ export const AudioPage: React.FC = () => {
           {/* Mobile Settings Toggle Button */}
           <button
             type="button"
-            onClick={() => setMobileSettingsOpen(true)}
+            onClick={() => {
+              setMobileTab('history');
+              setMobileSettingsOpen(true);
+            }}
+            className="xl:hidden px-3 py-2 rounded-[var(--radius-buttons)] bg-[var(--bg-2)] border border-[var(--border-subtle)] text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+            title="Open history"
+          >
+            History
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileTab('settings');
+              setMobileSettingsOpen(true);
+            }}
             className="xl:hidden p-2 rounded-[var(--radius-buttons)] bg-[var(--bg-2)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
             title="Open Settings"
           >
@@ -2816,114 +2940,7 @@ export const AudioPage: React.FC = () => {
           )}
 
           {/* TAB 2: HISTORY */}
-          {rightPanelTab === 'history' && (
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {audioItems.length === 0 ? (
-                <div className="p-8 text-center text-[var(--text-tertiary)] text-[12px]">
-                  No audio generated yet. Your results will appear here automatically.
-                </div>
-              ) : (
-                audioItems.map((item) => {
-                  const isPlaying = playingId === item.id;
-                  const rating = feedbackRatings[item.id];
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="p-3 bg-[var(--bg-2)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] rounded-[var(--radius-cards)] space-y-2.5 transition-all shadow-xs"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => togglePlayAudio(item.url, item.id, item)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
-                              isPlaying
-                                ? 'bg-[var(--accent)] text-white'
-                                : 'bg-[var(--bg-3)] text-[var(--text-primary)] hover:bg-[var(--accent)] hover:text-white'
-                            }`}
-                          >
-                            {isPlaying ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
-                          </button>
-
-                          <div className="min-w-0">
-                            <p className="text-[12px] font-semibold text-[var(--text-primary)] truncate">
-                              {item.title || item.metadata?.voice || 'Voice Track'}
-                            </p>
-                            <p className="text-[10px] text-[var(--text-secondary)] truncate">
-                              {item.metadata?.voice ? `${item.metadata.voice} • ` : ''}
-                              {item.sourceTool || 'Audio'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <span className="text-[10px] text-[var(--text-tertiary)] shrink-0 tabular-nums">
-                          {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      {/* Action Bar */}
-                      <div className="flex items-center justify-between pt-1.5 border-t border-[var(--border-subtle)] text-[11px]">
-                        <div className="flex items-center gap-1">
-                          {/* Thumbs up / down */}
-                          <button
-                            type="button"
-                            onClick={() => handleFeedback(item.id, 'positive')}
-                            className={`p-1 rounded hover:bg-[var(--bg-3)] transition-colors cursor-pointer ${
-                              rating === 'positive' ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'
-                            }`}
-                          >
-                            <ThumbsUp size={12} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleFeedback(item.id, 'negative')}
-                            className={`p-1 rounded hover:bg-[var(--bg-3)] transition-colors cursor-pointer ${
-                              rating === 'negative' ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'
-                            }`}
-                          >
-                            <ThumbsDown size={12} />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSoundModalTarget({
-                                isOpen: true,
-                                video: videoAssets[0] || null,
-                                audio: {
-                                  url: item.url,
-                                  type: item.tags?.includes('music') ? 'music' : item.tags?.includes('sfx') ? 'sfx' : 'voice',
-                                  title: item.title,
-                                },
-                              });
-                            }}
-                            className="text-[var(--accent)] hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                          >
-                            <Film size={11} />
-                            <span>Use in video</span>
-                          </button>
-
-                          <a
-                            href={item.url}
-                            download={`crenord_${item.id}.mp3`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-                            title="Download"
-                          >
-                            <Download size={13} />
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
+          {rightPanelTab === 'history' && renderHistory()}
         </aside>
       </div>
 
@@ -2983,7 +3000,20 @@ export const AudioPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
-              <span className="type-h3 text-[16px] text-[var(--text-primary)] font-semibold">Settings</span>
+              <div className="flex gap-1">
+                {(['settings', 'history'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setMobileTab(t)}
+                    className={`px-3 py-1.5 rounded-[var(--radius-buttons)] text-[13px] font-semibold capitalize cursor-pointer ${
+                      mobileTab === t ? 'bg-[var(--bg-3)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => setMobileSettingsOpen(false)}
@@ -2994,6 +3024,7 @@ export const AudioPage: React.FC = () => {
             </div>
 
             {/* Render Settings controls inside mobile sheet */}
+            {mobileTab === 'history' ? renderHistory() : (
             <div className="space-y-4">
               <div>
                 <label className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">
@@ -3085,6 +3116,7 @@ export const AudioPage: React.FC = () => {
                 Apply & Close
               </Button>
             </div>
+            )}
           </div>
         </div>
       )}

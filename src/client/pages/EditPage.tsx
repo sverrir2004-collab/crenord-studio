@@ -307,6 +307,40 @@ export const EditPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assetFromLink]);
 
+  // Keep the editing session when you leave the page or reload: restore the version list on open.
+  const sessionHydrated = useRef(false);
+  useEffect(() => {
+    if (assetFromLink) {
+      sessionHydrated.current = true;
+      return;
+    }
+    try {
+      const raw = localStorage.getItem('crenord_edit_session');
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved.versions) && saved.versions.length > 0 && saved.versions[0]?.url) {
+          const first = saved.versions[0];
+          handleSelectMedia({ id: first.assetId, url: first.url, type: first.type, title: first.label });
+          setVersions(saved.versions);
+          setActiveVersionIndex(
+            typeof saved.active === 'number' && saved.active >= 0 && saved.active < saved.versions.length
+              ? saved.active
+              : saved.versions.length - 1
+          );
+        }
+      }
+    } catch {}
+    sessionHydrated.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!sessionHydrated.current) return;
+    try {
+      if (versions.length === 0) localStorage.removeItem('crenord_edit_session');
+      else localStorage.setItem('crenord_edit_session', JSON.stringify({ versions, active: activeVersionIndex }));
+    } catch {}
+  }, [versions, activeVersionIndex]);
+
   // Initialize with an uploaded or selected file
   const handleSelectMedia = (asset: { id?: string; url: string; type: 'image' | 'video'; title?: string; metadata?: any }) => {
     const vOriginal: VersionItem = {
