@@ -33,7 +33,9 @@ import {
 import { Button } from '../components/ui/Button.tsx';
 import { Dropzone } from '../components/ui/Dropzone.tsx';
 import { AddSoundModal } from '../components/audio/AddSoundModal.tsx';
-import { VoicePickerPopover, VOICES_CATALOG, VoiceData } from '../components/audio/VoicePickerPopover.tsx';
+import { TtsModelPicker } from '../components/audio/TtsModelPicker.tsx';
+import { ttsModelInfo, ttsCost } from '../lib/ttsModels.ts';
+import { VoicePickerPopover, VOICES_CATALOG, VoiceData, voicesForModel } from '../components/audio/VoicePickerPopover.tsx';
 import { AudioMiniPlayer } from '../components/audio/AudioMiniPlayer.tsx';
 import {
   MusicPanel,
@@ -201,6 +203,17 @@ export const AudioPage: React.FC = () => {
   // Text-to-Speech Settings
   const [selectedVoice, setSelectedVoice] = useState('Rachel');
   const [selectedModel, setSelectedModel] = useState<string>('tts_turbo_v25');
+
+  // When the model changes, make sure the chosen voice belongs to it.
+  useEffect(() => {
+    const info = ttsModelInfo(selectedModel);
+    const list = voicesForModel(info.family);
+    if (list.length === 0) return;
+    if (!list.some((v) => v.name === selectedVoice) && !customVoices.some((c) => c.voiceId === selectedVoice || c.name === selectedVoice)) {
+      setSelectedVoice(list.some((v) => v.name === info.defaultVoice) ? info.defaultVoice : list[0].name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedModel]);
   const [selectedLanguage, setSelectedLanguage] = useState('auto');
   const [speed, setSpeed] = useState(1.0);
   const [stability, setStability] = useState(0.5);
@@ -711,22 +724,8 @@ export const AudioPage: React.FC = () => {
   const getToolCost = (): number => {
     if (activeTool === 'tts') {
       const chars = ttsScript.length || 0;
-      let rate = 0.0001;
-      if (selectedModel === 'tts_turbo_v25') rate = 0.00005;
-      else if (selectedModel === 'tts_eleven_v3') rate = 0.0001;
-      else if (selectedModel === 'tts_eleven_v4') rate = 0.0001;
-      else if (selectedModel === 'tts_multilingual_v2') rate = 0.0001;
-      else if (selectedModel === 'tts_minimax_28_hd') rate = 0.0001;
-      else if (selectedModel === 'tts_gemini_31_flash') rate = 0.00015;
-      else if (selectedModel === 'tts_inworld') rate = 0.00001;
-      else if (selectedModel === 'tts_xai') rate = 0.000015;
-      else if (selectedModel === 'tts_chatterbox') rate = 0.000025;
-      else if (selectedModel === 'tts_index_tts2') {
-        const estSec = Math.max(1, Math.round(chars / 15));
-        return Math.round(estSec * 0.002 * 1000) / 1000;
-      }
       const multiplier = multiLangActive ? multiLanguages.length : 1;
-      return Math.round(chars * rate * multiplier * 1000) / 1000;
+      return Math.round(ttsCost(selectedModel, chars) * multiplier * 1000) / 1000;
     }
     if (activeTool === 'dialogue') {
       const chars = dialogueLines.reduce((acc, l) => acc + l.text.length, 0);
@@ -877,7 +876,7 @@ export const AudioPage: React.FC = () => {
             if (customSeed) base.seed = parseInt(customSeed, 10);
             base.apply_text_normalization = applyTextNormalization;
             if (langCode && langCode !== 'auto') base.language_code = langCode;
-          } else if (selectedModel === 'tts_minimax_28_hd') {
+          } else if (selectedModel.startsWith('tts_minimax')) {
             base.speed = speed;
             base.emotion = minimaxEmotion;
             base.vol = minimaxVol;
@@ -887,6 +886,8 @@ export const AudioPage: React.FC = () => {
             base.temperature = geminiTemperature;
           } else if (selectedModel === 'tts_inworld') {
             base.sample_rate_hertz = inworldSampleRate;
+          } else if (selectedModel === 'tts_kokoro') {
+            base.speed = speed;
           } else if (selectedModel === 'tts_xai') {
             if (langCode && langCode !== 'auto') base.language = langCode;
           } else if (selectedModel === 'tts_chatterbox') {
@@ -1085,6 +1086,7 @@ export const AudioPage: React.FC = () => {
   };
 
   // Find active voice object
+  const modelVoices = voicesForModel(ttsModelInfo(selectedModel).family);
   const activeVoiceObj = VOICES_CATALOG.find((v) => v.name === selectedVoice) || VOICES_CATALOG[0];
 
   return (
@@ -1255,7 +1257,7 @@ export const AudioPage: React.FC = () => {
                 <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)] text-[12px] text-[var(--text-secondary)]">
                   <div className="tabular-nums">
                     <span className="font-medium text-[var(--text-primary)]">{ttsScript.length}</span>
-                    <span className="text-[var(--text-tertiary)]"> / 5,000 characters</span>
+                    <span className="text-[var(--text-tertiary)]"> / {ttsModelInfo(selectedModel).maxChars.toLocaleString('en-US')} characters</span>
                   </div>
                   <div className="font-semibold text-[var(--accent)] tabular-nums">
                     ≈ ${getToolCost().toFixed(3)}
@@ -2244,7 +2246,7 @@ export const AudioPage: React.FC = () => {
                     Model
                   </label>
                   {/* Swedish language support badge */}
-                  {(selectedModel === 'tts_minimax_28_hd' || selectedModel === 'tts_gemini_31_flash' || selectedModel.startsWith('tts_eleven')) ? (
+                  {ttsModelInfo(selectedModel).swedish ? (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       Swedish: yes
                     </span>
@@ -2254,36 +2256,7 @@ export const AudioPage: React.FC = () => {
                     </span>
                   )}
                 </div>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full bg-[var(--bg-2)] border border-[var(--border-subtle)] text-[12px] text-[var(--text-primary)] p-2.5 rounded-[var(--radius-buttons)] outline-hidden font-medium"
-                >
-                  <optgroup label="ElevenLabs">
-                    <option value="tts_eleven_v4">ElevenLabs v4 (Pro) — Most expressive ($0.10/1k)</option>
-                    <option value="tts_eleven_v3">ElevenLabs v3 — Balanced quality ($0.08/1k)</option>
-                    <option value="tts_multilingual_v2">ElevenLabs Multilingual v2 — Translations ($0.09/1k)</option>
-                    <option value="tts_turbo_v25">ElevenLabs Turbo v2.5 — Fastest draft ($0.05/1k)</option>
-                  </optgroup>
-                  <optgroup label="MiniMax">
-                    <option value="tts_minimax_28_hd">MiniMax Speech 2.8 HD — Emotions & audio tags ($0.10/1k)</option>
-                  </optgroup>
-                  <optgroup label="Google Gemini">
-                    <option value="tts_gemini_31_flash">Gemini 3.1 Flash TTS — Dialogue + tags ($0.15/1k)</option>
-                  </optgroup>
-                  <optgroup label="Inworld">
-                    <option value="tts_inworld">Inworld TTS — Cheapest, max 2k chars ($0.01/1k)</option>
-                  </optgroup>
-                  <optgroup label="xAI">
-                    <option value="tts_xai">xAI TTS v1 — Streaming tags ($0.015/1k)</option>
-                  </optgroup>
-                  <optgroup label="Chatterbox">
-                    <option value="tts_chatterbox">Chatterbox TTS — Clone from clip ($0.025/1k)</option>
-                  </optgroup>
-                  <optgroup label="Index TTS">
-                    <option value="tts_index_tts2">Index TTS 2 — Emotion control ($0.002/sec)</option>
-                  </optgroup>
-                </select>
+                <TtsModelPicker value={selectedModel} onChange={setSelectedModel} />
               </div>
 
               {/* c) Language Select */}
@@ -2306,8 +2279,33 @@ export const AudioPage: React.FC = () => {
 
               {/* d) Model-Specific Settings */}
 
+              {/* Kokoro and Orpheus */}
+              {selectedModel === 'tts_kokoro' && (
+                <div className="p-3.5 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)] space-y-2">
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-[var(--text-secondary)] font-medium">Speed: {speed.toFixed(2)}x</span>
+                  </div>
+                  <input type="range" min="0.5" max="2" step="0.05" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-full accent-[var(--accent)]" />
+                  <p className="text-[11px] text-[var(--text-tertiary)]">English only. Very low cost, good for quick drafts.</p>
+                </div>
+              )}
+              {selectedModel === 'tts_orpheus' && (
+                <div className="p-3.5 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)]">
+                  <p className="text-[11px] text-[var(--text-tertiary)]">
+                    English only. Add expression in the text with tags such as &lt;laugh&gt;, &lt;sigh&gt;, &lt;chuckle&gt; or &lt;gasp&gt;.
+                  </p>
+                </div>
+              )}
+              {ttsModelInfo(selectedModel).family === 'reference' && (
+                <div className="p-3.5 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)]">
+                  <p className="text-[11px] text-[var(--text-tertiary)]">
+                    This model has no ready voices. It copies the voice from a short audio clip, which you add in the settings below.
+                  </p>
+                </div>
+              )}
+
               {/* MiniMax Speech 2.8 HD Controls */}
-              {selectedModel === 'tts_minimax_28_hd' && (
+              {selectedModel.startsWith('tts_minimax') && (
                 <div className="p-3.5 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)] space-y-3.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] font-bold text-[var(--text-primary)]">MiniMax Emotion & Modulation</span>
@@ -2930,6 +2928,7 @@ export const AudioPage: React.FC = () => {
 
       {/* VOICE PICKER POPOVER MODAL */}
       <VoicePickerPopover
+        voices={modelVoices.length ? modelVoices : VOICES_CATALOG}
         isOpen={isVoicePickerOpen}
         onClose={() => setIsVoicePickerOpen(false)}
         selectedVoice={selectedVoice}
@@ -2976,38 +2975,9 @@ export const AudioPage: React.FC = () => {
                 <label className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">
                   Model
                 </label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="w-full bg-[var(--bg-2)] border border-[var(--border-subtle)] text-[12px] text-[var(--text-primary)] p-2.5 rounded-[var(--radius-buttons)]"
-                >
-                  <optgroup label="ElevenLabs">
-                    <option value="tts_eleven_v4">ElevenLabs v4 (Pro) — $0.10/1k</option>
-                    <option value="tts_eleven_v3">ElevenLabs v3 — $0.08/1k</option>
-                    <option value="tts_multilingual_v2">ElevenLabs Multilingual v2 — $0.09/1k</option>
-                    <option value="tts_turbo_v25">ElevenLabs Turbo v2.5 — $0.05/1k</option>
-                  </optgroup>
-                  <optgroup label="MiniMax">
-                    <option value="tts_minimax_28_hd">MiniMax Speech 2.8 HD — $0.10/1k</option>
-                  </optgroup>
-                  <optgroup label="Google Gemini">
-                    <option value="tts_gemini_31_flash">Gemini 3.1 Flash TTS — $0.15/1k</option>
-                  </optgroup>
-                  <optgroup label="Inworld">
-                    <option value="tts_inworld">Inworld TTS — $0.01/1k</option>
-                  </optgroup>
-                  <optgroup label="xAI">
-                    <option value="tts_xai">xAI TTS v1 — $0.015/1k</option>
-                  </optgroup>
-                  <optgroup label="Chatterbox">
-                    <option value="tts_chatterbox">Chatterbox TTS — $0.025/1k</option>
-                  </optgroup>
-                  <optgroup label="Index TTS">
-                    <option value="tts_index_tts2">Index TTS 2 — $0.002/sec</option>
-                  </optgroup>
-                </select>
+                <TtsModelPicker value={selectedModel} onChange={setSelectedModel} />
                 <div className="mt-1">
-                  {(selectedModel === 'tts_minimax_28_hd' || selectedModel === 'tts_gemini_31_flash' || selectedModel.startsWith('tts_eleven')) ? (
+                  {ttsModelInfo(selectedModel).swedish ? (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       Swedish: yes
                     </span>

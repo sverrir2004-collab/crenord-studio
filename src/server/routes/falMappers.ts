@@ -622,6 +622,32 @@ export function mapExtraModelInput(endpoint: string, input: In, units: number): 
       return p;
     }
 
+    case 'fal-ai/minimax/speech-2.8-turbo': {
+      const p: In = {
+        prompt: input.prompt || input.text || '',
+        voice_id: input.voice_id || input.voice || 'Wise_Woman',
+        speed: Number(input.speed ?? 1.0),
+        emotion: input.emotion || 'neutral',
+      };
+      if (input.vol !== undefined) p.vol = Number(input.vol);
+      if (input.pitch !== undefined) p.pitch = Number(input.pitch);
+      return p;
+    }
+    case 'fal-ai/kokoro/american-english':
+      return {
+        prompt: input.prompt || input.text || '',
+        voice: input.voice || 'af_heart',
+        speed: Number(input.speed ?? 1.0),
+      };
+    case 'fal-ai/orpheus-tts': {
+      const p: In = {
+        text: input.text || input.prompt || '',
+        voice: input.voice || 'tara',
+      };
+      if (input.temperature !== undefined) p.temperature = Number(input.temperature);
+      return p;
+    }
+
     // ---------- Audio: music ----------
     case 'sonilo/v1.1/text-to-music': {
       const sec = Number(input.duration || (input.music_length_ms ? input.music_length_ms / 1000 : 30));

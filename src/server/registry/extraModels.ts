@@ -234,4 +234,21 @@ export const EXTRA_MODELS: ModelRegistryEntry[] = [
     endpoint: 'fal-ai/wizper', unit: 'minute', price: 0.006,
     priceNote: 'Estimate $0.006 per minute', mode: 'draft', outputType: 'audio',
   }),
+
+  // ==================== VOICE: more text to speech models ====================
+  make({
+    key: 'tts_minimax_28_turbo', tool: 'audio.tts', label: 'MiniMax Speech 2.8 Turbo', group: 'Voice', badge: 'Fast, emotions',
+    endpoint: 'fal-ai/minimax/speech-2.8-turbo', unit: 'character', price: 0.00006,
+    priceNote: 'Estimate $0.06 per 1,000 characters', mode: 'draft', outputType: 'audio', formats: ['mp3'],
+  }),
+  make({
+    key: 'tts_kokoro', tool: 'audio.tts', label: 'Kokoro (American English)', group: 'Voice', badge: 'Very cheap',
+    endpoint: 'fal-ai/kokoro/american-english', unit: 'character', price: 0.00002,
+    priceNote: 'Estimate $0.02 per 1,000 characters. English only', mode: 'draft', outputType: 'audio', formats: ['mp3'],
+  }),
+  make({
+    key: 'tts_orpheus', tool: 'audio.tts', label: 'Orpheus TTS', group: 'Voice', badge: 'Natural, emotive',
+    endpoint: 'fal-ai/orpheus-tts', unit: 'character', price: 0.00005,
+    priceNote: 'Estimate $0.05 per 1,000 characters. English, supports tags like <laugh>', mode: 'draft', outputType: 'audio', formats: ['mp3'],
+  }),
 ];

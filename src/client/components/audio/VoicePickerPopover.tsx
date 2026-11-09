@@ -48,7 +48,70 @@ export const VOICES_CATALOG: VoiceData[] = [
   // xAI voices
   { name: 'eve', gender: 'Female', style: 'Conversational', accent: 'xAI', description: 'Smooth, natural streaming-tag enabled conversational voice.', tags: ['xAI', 'Smooth', 'Modern'] },
   { name: 'sal', gender: 'Male', style: 'Conversational', accent: 'xAI', description: 'Energetic, modern delivery with fast response time.', tags: ['xAI', 'Energetic', 'Podcast'] },
+  { name: 'Zephyr', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Charon', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Leda', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Orus', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Callirrhoe', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Autonoe', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Enceladus', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Iapetus', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Umbriel', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Algieba', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Despina', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Erinome', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Algenib', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Rasalgethi', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Laomedeia', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Achernar', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Alnilam', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Schedar', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Gacrux', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Pulcherrima', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Achird', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Zubenelgenubi', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Vindemiatrix', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Sadachbia', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Sadaltager', gender: 'Male', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'Sulafat', gender: 'Female', style: 'Conversational', accent: 'Google Gemini', description: 'Gemini voice with inline audio tag support.', tags: ['Gemini'] },
+  { name: 'ara', gender: 'Female', style: 'Conversational', accent: 'xAI', description: 'xAI streaming voice.', tags: ['xAI'] },
+  { name: 'rex', gender: 'Male', style: 'Conversational', accent: 'xAI', description: 'xAI streaming voice.', tags: ['xAI'] },
+  { name: 'leo', gender: 'Male', style: 'Conversational', accent: 'xAI', description: 'xAI streaming voice.', tags: ['xAI'] },
+  { name: 'af_heart', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Warm, friendly American voice.', tags: ['Kokoro'] },
+  { name: 'af_bella', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Bright, expressive American voice.', tags: ['Kokoro'] },
+  { name: 'af_nicole', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Soft, calm American voice.', tags: ['Kokoro'] },
+  { name: 'af_sky', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Light, airy American voice.', tags: ['Kokoro'] },
+  { name: 'am_adam', gender: 'Male', style: 'Narration', accent: 'Kokoro', description: 'Clear, steady American voice.', tags: ['Kokoro'] },
+  { name: 'am_michael', gender: 'Male', style: 'Narration', accent: 'Kokoro', description: 'Warm, mature American voice.', tags: ['Kokoro'] },
+  { name: 'bf_emma', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Polished British voice.', tags: ['Kokoro'] },
+  { name: 'bm_george', gender: 'Male', style: 'Narration', accent: 'Kokoro', description: 'Warm British voice.', tags: ['Kokoro'] },
+  { name: 'tara', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'leah', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'jess', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'mia', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'zoe', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'leo', gender: 'Male', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'dan', gender: 'Male', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
+  { name: 'zac', gender: 'Male', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
 ];
+
+/** Which voices a model can use. Models that copy a voice from a clip have none. */
+export function voicesForModel(family: string): VoiceData[] {
+  const byAccent = (a: string) => VOICES_CATALOG.filter((v) => v.accent === a);
+  switch (family) {
+    case 'minimax': return byAccent('MiniMax HD');
+    case 'gemini': return byAccent('Google Gemini');
+    case 'inworld': return byAccent('Inworld');
+    case 'xai': return byAccent('xAI');
+    case 'kokoro': return byAccent('Kokoro');
+    case 'orpheus': return byAccent('Orpheus');
+    case 'reference': return [];
+    default:
+      return VOICES_CATALOG.filter(
+        (v) => !['MiniMax HD', 'Google Gemini', 'Inworld', 'xAI', 'Kokoro', 'Orpheus'].includes(v.accent)
+      );
+  }
+}
 
 export interface CustomVoiceItem {
   id: string;
@@ -68,6 +131,7 @@ export interface VoicePickerPopoverProps {
   onPreviewVoice: (voiceName: string) => void;
   isPlayingPreview?: string | null;
   customVoices?: CustomVoiceItem[];
+  voices?: VoiceData[];
 }
 
 export const VoicePickerPopover: React.FC<VoicePickerPopoverProps> = ({
@@ -78,6 +142,7 @@ export const VoicePickerPopover: React.FC<VoicePickerPopoverProps> = ({
   onPreviewVoice,
   isPlayingPreview,
   customVoices = [],
+  voices = VOICES_CATALOG,
 }) => {
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState<'all' | 'Female' | 'Male'>('all');
@@ -104,7 +169,7 @@ export const VoicePickerPopover: React.FC<VoicePickerPopoverProps> = ({
 
   const filteredVoices = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return VOICES_CATALOG.filter((voice) => {
+    return voices.filter((voice) => {
       if (genderFilter !== 'all' && voice.gender !== genderFilter) return false;
       if (styleFilter !== 'all' && voice.style.toLowerCase() !== styleFilter.toLowerCase()) return false;
       if (!q) return true;
@@ -121,7 +186,7 @@ export const VoicePickerPopover: React.FC<VoicePickerPopoverProps> = ({
       if (bFav !== aFav) return bFav - aFav;
       return a.name.localeCompare(b.name);
     });
-  }, [search, genderFilter, styleFilter, favorites]);
+  }, [search, genderFilter, styleFilter, favorites, voices]);
 
   if (!isOpen) return null;
 
