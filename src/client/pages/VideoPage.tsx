@@ -14,6 +14,9 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Segmented } from '../components/ui/Segmented.tsx';
 import { PromptBar, PromptBarSubmitPayload } from '../components/ui/PromptBar.tsx';
+import { useItemActions } from '../lib/useItemActions.tsx';
+import { fetchAsset } from '../lib/assetActions.ts';
+import { useSearchParams } from 'react-router-dom';
 import { ResultCard } from '../components/ui/ResultCard.tsx';
 import { DetailsDrawer } from '../components/ui/DetailsDrawer.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
@@ -70,6 +73,22 @@ export const VideoPage: React.FC = () => {
 
   // Frame slots (72px) uploaded URLs
   const [startImageUrl, setStartImageUrl] = useState<string | null>(null);
+  const act = useItemActions({ onDeleted: () => setSelectedItem(null) });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const promptFromLink = searchParams.get('prompt') || '';
+  const imageFromLink = searchParams.get('image');
+
+  // Arrived from "Animate" on an image: use that image as the start frame.
+  useEffect(() => {
+    if (!imageFromLink) return;
+    let alive = true;
+    fetchAsset(imageFromLink).then((a) => {
+      if (alive && a?.url) setStartImageUrl(a.url);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [imageFromLink]);
   const [endImageUrl, setEndImageUrl] = useState<string | null>(null);
   const [isUploadingStart, setIsUploadingStart] = useState(false);
   const [isUploadingEnd, setIsUploadingEnd] = useState(false);
@@ -579,6 +598,7 @@ export const VideoPage: React.FC = () => {
           isCostBlocked={isCostBlocked}
           costBlockedMessage={costBlockedMessage}
           errorMessage={startImageError}
+          initialPrompt={promptFromLink}
         />
       </div>
     );
@@ -822,16 +842,21 @@ export const VideoPage: React.FC = () => {
                     : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
                 }`}
               >
-                {items.map((item) => (
+                {items.filter((it) => !act.isHidden(it.id)).map((item) => (
                   <ResultCard
                     key={item.id}
-                    item={item}
+                    item={act.decorate(item)}
+                    onFavoriteToggle={() => act.handle('favorite', item)}
                     status={isRunning ? 'running' : isFailed ? 'failed' : 'done'}
                     progress={job.progress || (job.status === 'running' ? 50 : 15)}
                     elapsedSeconds={elapsed}
                     onOpenDetails={() => setSelectedItem(item)}
-                    onAction={(act) => {
-                      if (act === 'retry') {
+                    onAction={(action) => {
+                      if (action !== 'retry') {
+                        act.handle(action, item);
+                        return;
+                      }
+                      if (action === 'retry') {
                         handleSubmitJob({
                           prompt: job.input.prompt || '',
                           modelKey: job.modelKey,
@@ -866,6 +891,7 @@ export const VideoPage: React.FC = () => {
         isCostBlocked={isCostBlocked}
         costBlockedMessage={costBlockedMessage}
         errorMessage={startImageError}
+        initialPrompt={promptFromLink}
       />
 
       {/* Details Drawer with Video Player features */}
@@ -873,7 +899,9 @@ export const VideoPage: React.FC = () => {
         item={selectedItem}
         isOpen={Boolean(selectedItem)}
         onClose={() => setSelectedItem(null)}
+        onAction={act.handleFromDrawer}
       />
+      {act.ui}
     </div>
   );
 };

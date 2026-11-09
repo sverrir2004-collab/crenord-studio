@@ -19,6 +19,7 @@ import {
 import { Button } from '../components/ui/Button.tsx';
 import { Chip } from '../components/ui/Chip.tsx';
 import { Segmented } from '../components/ui/Segmented.tsx';
+import { useItemActions } from '../lib/useItemActions.tsx';
 import { ResultCard } from '../components/ui/ResultCard.tsx';
 import { DetailsDrawer } from '../components/ui/DetailsDrawer.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
@@ -37,6 +38,12 @@ export const AssetsPage: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const act = useItemActions({
+    onDeleted: (id) => {
+      setItems((prev) => prev.filter((it) => it.id !== id));
+      setSelectedItem(null);
+    },
+  });
 
   // Filters
   const [search, setSearch] = useState('');
@@ -466,10 +473,10 @@ export const AssetsPage: React.FC = () => {
               onOpenDetails={() => setSelectedItem(item)}
               onAction={(action) => {
                 if (action === 'export') handleOpenExportModal(item);
-                if (action === 'delete') {
+                else if (action === 'delete') {
                   setSelectedIds(new Set([item.id]));
                   handleDeleteSelected();
-                }
+                } else act.handle(action, item);
               }}
             />
           ))}
@@ -678,7 +685,9 @@ export const AssetsPage: React.FC = () => {
         item={selectedItem}
         isOpen={Boolean(selectedItem)}
         onClose={() => setSelectedItem(null)}
+        onAction={act.handleFromDrawer}
       />
+      {act.ui}
     </div>
   );
 };

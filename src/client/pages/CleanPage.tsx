@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { fetchAsset } from '../lib/assetActions.ts';
 import { createPortal } from 'react-dom';
 import {
   Eraser,
@@ -496,6 +497,23 @@ export const CleanPage: React.FC = () => {
       alert(`Upload error: ${err.message}`);
     }
   };
+
+  // Arrived from "Clean" on a result: load that file as the source.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const assetFromLink = searchParams.get('asset');
+  useEffect(() => {
+    if (!assetFromLink) return;
+    let alive = true;
+    fetchAsset(assetFromLink).then((a) => {
+      if (!alive || !a?.url) return;
+      handleSelectAsset({ id: a.id, url: a.url, type: a.type === 'video' ? 'video' : 'image', title: a.title, metadata: a.metadata } as any);
+      setSearchParams({}, { replace: true });
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetFromLink]);
 
   // Asset picker selection
   const handleSelectAsset = (asset: PickableAsset) => {

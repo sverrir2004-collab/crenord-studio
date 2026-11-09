@@ -37,6 +37,9 @@ import { CostBanner } from '../components/ui/CostBanner.tsx';
 import { Badge } from '../components/ui/Badge.tsx';
 import { useReviewState } from '../lib/useReviewState.ts';
 import { fetchWithAuth } from '../lib/firebase.ts';
+import { useSearchParams } from 'react-router-dom';
+import { useItemActions } from '../lib/useItemActions.tsx';
+import { fetchAsset } from '../lib/assetActions.ts';
 import { MotionTransferPanel, TryOnPanel } from '../components/audio/ExtraVoiceTools.tsx';
 
 export interface VersionItem {
@@ -278,6 +281,31 @@ export const EditPage: React.FC = () => {
       localStorage.setItem(`crenord_last_tool_${mediaType}`, toolId);
     } catch {}
   };
+
+  // Arrived from another page ("Edit", "Extend" on a result): open that file straight away.
+  const act = useItemActions();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const assetFromLink = searchParams.get('asset');
+  const toolFromLink = searchParams.get('tool');
+  useEffect(() => {
+    if (!assetFromLink) return;
+    let alive = true;
+    fetchAsset(assetFromLink).then((a) => {
+      if (!alive || !a?.url) return;
+      const type = a.type === 'video' ? 'video' : 'image';
+      handleSelectMedia({ id: a.id, url: a.url, type, title: a.title, metadata: a.metadata });
+      if (toolFromLink && type === 'video' && ['vedit', 'extend', 'vupscale', 'trim', 'reformat', 'motion'].includes(toolFromLink)) {
+        setActiveTool(toolFromLink as ToolId);
+      } else {
+        setActiveTool(type === 'video' ? 'vedit' : 'ai-edit');
+      }
+      setSearchParams({}, { replace: true });
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetFromLink]);
 
   // Initialize with an uploaded or selected file
   const handleSelectMedia = (asset: { id?: string; url: string; type: 'image' | 'video'; title?: string; metadata?: any }) => {
@@ -1834,17 +1862,31 @@ export const EditPage: React.FC = () => {
             <div className="flex items-center justify-between pt-1 text-[11px]">
               <button
                 type="button"
-                onClick={() => alert(`Version ${activeVersion.label} saved in Assets.`)}
+                onClick={() =>
+                  act.handle('addToProject', {
+                    id: activeVersion.assetId,
+                    type: activeVersion.type,
+                    title: activeVersion.label,
+                    url: activeVersion.url,
+                    createdAt: '',
+                  } as any)
+                }
                 className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
               >
                 <FolderPlus size={13} />
-                <span>Save to Assets</span>
+                <span>Add to project</span>
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (activeVersion.url) window.open(activeVersion.url, '_blank');
-                }}
+                onClick={() =>
+                  act.handle('download', {
+                    id: activeVersion.assetId,
+                    type: activeVersion.type,
+                    title: `${activeVersion.label}`,
+                    url: activeVersion.url,
+                    createdAt: '',
+                  } as any)
+                }
                 className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 cursor-pointer"
               >
                 <Download size={13} />
@@ -1856,6 +1898,8 @@ export const EditPage: React.FC = () => {
           </>
         )}
       </div>
+
+      {act.ui}
 
       {/* ================= 4. VERSIONS STRIP AT THE BOTTOM ================= */}
       <div className="rounded-[var(--radius-cards)] bg-[var(--bg-2)] border border-[var(--border-subtle)] overflow-hidden select-none">

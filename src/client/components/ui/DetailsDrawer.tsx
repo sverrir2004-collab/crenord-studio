@@ -53,7 +53,7 @@ export const DetailsDrawer: React.FC<DetailsDrawerProps> = ({
   };
 
   const downloadFormats =
-    item.type === 'video' ? ['mp4', 'gif', 'webm'] : ['png', 'jpg', 'webp'];
+    item.type === 'video' ? ['mp4'] : item.type === 'audio' ? ['mp3'] : ['png', 'jpg', 'webp'];
 
   return (
     <>

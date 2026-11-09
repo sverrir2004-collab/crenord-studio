@@ -14,6 +14,7 @@ import {
 import { PromptBar } from '../components/ui/PromptBar.tsx';
 import { Chip } from '../components/ui/Chip.tsx';
 import { Segmented } from '../components/ui/Segmented.tsx';
+import { useItemActions } from '../lib/useItemActions.tsx';
 import { ResultCard } from '../components/ui/ResultCard.tsx';
 import { DetailsDrawer } from '../components/ui/DetailsDrawer.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
@@ -28,6 +29,7 @@ export const HomePage: React.FC = () => {
   const [reviewState] = useReviewState();
   const [homeTool, setHomeTool] = useState<'Image' | 'Video'>('Image');
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const act = useItemActions({ onDeleted: () => setSelectedItem(null) });
   const [recentItems, setRecentItems] = useState<MediaItem[]>([]);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
 
@@ -265,15 +267,18 @@ export const HomePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {recentItems.map((item) => (
+          {recentItems.filter((it) => !act.isHidden(it.id)).map((item) => (
             <div key={item.id} className="relative">
               <ResultCard
-                item={item}
+                item={act.decorate(item)}
                 onOpenDetails={() => setSelectedItem(item)}
+                onFavoriteToggle={() => act.handle('favorite', item)}
                 onAction={(action) => {
                   if (action === 'reusePrompt') {
                     setSelectedPreset(item.prompt || '');
+                    return;
                   }
+                  act.handle(action, item);
                 }}
               />
             </div>
@@ -286,7 +291,9 @@ export const HomePage: React.FC = () => {
         item={selectedItem}
         isOpen={Boolean(selectedItem)}
         onClose={() => setSelectedItem(null)}
+        onAction={act.handleFromDrawer}
       />
+      {act.ui}
     </div>
   );
 };

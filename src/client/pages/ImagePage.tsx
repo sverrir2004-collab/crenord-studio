@@ -12,6 +12,9 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Segmented } from '../components/ui/Segmented.tsx';
 import { PromptBar, PromptBarSubmitPayload } from '../components/ui/PromptBar.tsx';
+import { useItemActions } from '../lib/useItemActions.tsx';
+import { fetchAsset } from '../lib/assetActions.ts';
+import { useSearchParams } from 'react-router-dom';
 import { ResultCard } from '../components/ui/ResultCard.tsx';
 import { DetailsDrawer } from '../components/ui/DetailsDrawer.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
@@ -61,6 +64,9 @@ export const ImagePage: React.FC = () => {
   const [reviewState] = useReviewState();
   const [mode, setMode] = useState<'text-to-image' | 'product-scene'>('text-to-image');
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const act = useItemActions({ onDeleted: () => setSelectedItem(null) });
+  const [searchParams] = useSearchParams();
+  const promptFromLink = searchParams.get('prompt') || '';
 
   // Cost guard blocking state
   const [isCostBlocked, setIsCostBlocked] = useState(false);
@@ -715,16 +721,21 @@ export const ImagePage: React.FC = () => {
                     : 'grid-cols-2 sm:grid-cols-4'
                 }`}
               >
-                {items.map((item) => (
+                {items.filter((it) => !act.isHidden(it.id)).map((item) => (
                   <ResultCard
                     key={item.id}
-                    item={item}
+                    item={act.decorate(item)}
+                    onFavoriteToggle={() => act.handle('favorite', item)}
                     status={isRunning ? 'running' : isFailed ? 'failed' : 'done'}
                     progress={job.progress || (job.status === 'running' ? 65 : 20)}
                     elapsedSeconds={elapsed}
                     onOpenDetails={() => setSelectedItem(item)}
-                    onAction={(act) => {
-                      if (act === 'retry') {
+                    onAction={(action) => {
+                      if (action !== 'retry') {
+                        act.handle(action, item);
+                        return;
+                      }
+                      if (action === 'retry') {
                         handleSubmitJob({
                           prompt: job.input.prompt,
                           modelKey: job.modelKey,
@@ -760,7 +771,7 @@ export const ImagePage: React.FC = () => {
         initialPrompt={
           mode === 'product-scene'
             ? `Product placed on ${selectedScene.toLowerCase()}, soft studio lighting, high-end commercial ad`
-            : ''
+            : promptFromLink
         }
       />
 
@@ -769,7 +780,9 @@ export const ImagePage: React.FC = () => {
         item={selectedItem}
         isOpen={Boolean(selectedItem)}
         onClose={() => setSelectedItem(null)}
+        onAction={act.handleFromDrawer}
       />
+      {act.ui}
 
       {/* Asset Picker Modal for choosing product photo from user's assets */}
       <AssetPickerModal

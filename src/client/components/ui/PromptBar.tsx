@@ -54,6 +54,9 @@ export const PromptBar: React.FC<PromptBarProps> = ({
   onModeChange,
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
+  useEffect(() => {
+    if (initialPrompt) setPrompt(initialPrompt);
+  }, [initialPrompt]);
   const [mode, setMode] = useState<'draft' | 'final'>(currentMode || 'draft');
   const [variants, setVariants] = useState<number>(1);
   const [showModelPicker, setShowModelPicker] = useState(false);
