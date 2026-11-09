@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "Job": {
+      "title": "Job",
+      "description": "A media generation or edit job submitted to fal.ai queue",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User ID who owns this job" },
+        "tool": { "type": "string", "description": "Tool name like image.create" },
+        "modelKey": { "type": "string", "description": "Key from the model registry" },
+        "falEndpoint": { "type": "string", "description": "fal.ai endpoint" },
+        "falRequestId": { "type": "string", "description": "Queue request id" },
+        "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed", "canceled"] },
+        "estCostUsd": { "type": "number", "description": "Computed job cost in USD" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "tool", "modelKey", "status", "estCostUsd", "createdAt"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "Generated or uploaded media asset",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner user ID" },
+        "type": { "type": "string", "enum": ["image", "video"] },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "prompt": { "type": "string" },
+        "model": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "type", "url", "createdAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Curated collection of campaign assets",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner user ID" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "assetCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "createdAt"]
+    },
+    "Usage": {
+      "title": "Usage",
+      "description": "Daily usage record for cost guard accounting",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner user ID" },
+        "date": { "type": "string" },
+        "tool": { "type": "string" },
+        "model": { "type": "string" },
+        "estCostUsd": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "date", "tool", "model", "estCostUsd", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Collection of asynchronous processing jobs"
+    },
+    "/assets/{assetId}": {
+      "schema": "Asset",
+      "description": "Collection of media assets"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Collection of user campaign projects"
+    },
+    "/usage/{usageId}": {
+      "schema": "Usage",
+      "description": "Ledger of job costs and daily spend"
+    }
+  }
+}

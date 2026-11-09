@@ -1,0 +1,6 @@
+{
+  "name": "CRENORD",
+  "description": "CRENORD is a web studio for ad creators to make and edit images and videos with AI and remove text, logos and objects from media.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isServer() {
+      return request.auth != null && (
+        request.auth.token.email == "SERVER_ACCOUNT_EMAIL" ||
+        request.auth.token.email == "server@crenord.app"
+      );
+    }
+
+    function isOwner() {
+      return request.auth != null &&
+        request.auth.token.email == "bjarkasonsverrir@gmail.com" &&
+        request.auth.token.email_verified == true;
+    }
+
+    // Health check collection
+    match /_health/{docId} {
+      allow read, write: if isServer();
+    }
+
+    // Jobs collection
+    match /jobs/{jobId} {
+      allow read: if (isOwner() && resource.data.uid == request.auth.uid) || isServer();
+      allow write: if isServer();
+    }
+
+    // Assets collection
+    match /assets/{assetId} {
+      allow read: if (isOwner() && resource.data.uid == request.auth.uid) || isServer();
+      allow write: if isServer();
+    }
+
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if (isOwner() && resource.data.uid == request.auth.uid) || isServer();
+      allow write: if isServer();
+    }
+
+    // Usage collection
+    match /usage/{usageId} {
+      allow read: if (isOwner() && resource.data.uid == request.auth.uid) || isServer();
+      allow write: if isServer();
+    }
+
+    // Voices collection
+    match /voices/{voiceId} {
+      allow read: if (isOwner() && resource.data.uid == request.auth.uid) || isServer();
+      allow write: if isServer();
+    }
+  }
+}
