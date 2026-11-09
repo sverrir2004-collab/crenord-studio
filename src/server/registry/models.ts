@@ -5,6 +5,8 @@
  * Never hard-code model IDs anywhere else.
  */
 
+import { EXTRA_MODELS } from './extraModels.ts';
+
 export type ModelTool =
   | 'image.create'
   | 'image.edit'
@@ -30,7 +32,8 @@ export type ModelTool =
   | 'audio.mix'
   | 'audio.burn_captions'
   | 'audio.voiceClone'
-  | 'audio.voiceDesign';
+  | 'audio.voiceDesign'
+  | 'audio.separate';
 
 export type ModelUnit = 'image' | 'megapixel' | 'second' | 'video' | 'character' | 'minute' | 'generation';
 
@@ -56,7 +59,7 @@ export interface ModelRegistryEntry {
   enabled: boolean;
 }
 
-export const MODEL_REGISTRY: ModelRegistryEntry[] = [
+const BASE_REGISTRY: ModelRegistryEntry[] = [
   // ==================== IMAGE - create ====================
   {
     key: 'img_draft',
@@ -169,13 +172,15 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: 'fal',
     unit: 'image',
     price: 0.08,
-    priceNote: 'Check price on fal',
+    priceNote: '$0.08 at 1K, 2K x1.5, 4K x2',
     priceVerifiedOn: '',
     mode: 'draft',
     inputMap: {},
     outputType: 'image',
+    resolutions: ['1K', '2K', '4K'],
+    formats: ['jpeg', 'png', 'webp'],
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [19] Nano Banana 2 (create)
@@ -214,13 +219,15 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: 'fal',
     unit: 'image',
     price: 0.15,
-    priceNote: '0.15 per image at 1K',
+    priceNote: '$0.15 at 1K and 2K, $0.30 at 4K',
     priceVerifiedOn: '',
     mode: 'final',
     inputMap: {},
     outputType: 'image',
+    resolutions: ['1K', '2K', '4K'],
+    formats: ['jpeg', 'png', 'webp'],
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'img_text',
@@ -316,13 +323,15 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: 'fal',
     unit: 'megapixel',
     price: 0.05,
-    priceNote: 'Check price on fal',
+    priceNote: 'About $0.05 per image, check price on fal',
     priceVerifiedOn: '',
     mode: 'final',
     inputMap: {},
     outputType: 'image',
+    resolutions: ['1k', '2k', '4k'],
+    formats: ['jpeg', 'png'],
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [25] FLUX.2 Pro
@@ -427,10 +436,10 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   {
     key: 'img_grok_imagine',
     tool: 'image.create',
-    label: 'Grok Imagine (image, quality)',
+    label: 'Grok Imagine (image)',
     group: 'Image',
     badge: 'Quality',
-    endpoint: 'xai/grok-imagine-image/quality/text-to-image',
+    endpoint: 'xai/grok-imagine-image',
     provider: 'fal',
     unit: 'image',
     price: 0.05,
@@ -439,8 +448,10 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     mode: 'final',
     inputMap: {},
     outputType: 'image',
+    resolutions: ['1k', '2k'],
+    formats: ['jpeg', 'png', 'webp'],
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [28] Z-Image Turbo
@@ -578,13 +589,15 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: 'fal',
     unit: 'image',
     price: 0.10,
-    priceNote: 'Check price on fal',
+    priceNote: 'About $0.10 at 1K, 2K x1.5, 4K x2',
     priceVerifiedOn: '',
     mode: 'final',
     inputMap: {},
     outputType: 'image',
+    resolutions: ['1K', '2K', '4K'],
+    formats: ['jpeg', 'png', 'webp'],
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [20] Nano Banana 2 Edit
@@ -989,7 +1002,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     },
     outputType: 'image',
     commercialOk: false,
-    enabled: false, // License unconfirmed per CRENORD NOTES
+    enabled: true,
   },
   {
     // [36] Topaz Upscale Image (generative)
@@ -1096,14 +1109,16 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: 'fal',
     unit: 'second',
     price: 0.05,
-    priceNote: '480p 0.05, 768p 0.08, 2K 0.13, 4K 0.16',
+    priceNote: '480P $0.05/s, 768P $0.08/s, 2K $0.13/s, 4K $0.16/s',
     priceVerifiedOn: '',
     mode: 'draft',
     inputMap: {},
     outputType: 'video',
-    maxDuration: 10,
+    resolutions: ['480P', '768P', '2K', '4K'],
+    formats: ['21:9', '16:9', '4:3', '1:1', '3:4', '9:16'],
+    maxDuration: 15,
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [1] MiniMax H3 Max - text to video
@@ -1219,10 +1234,10 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   {
     key: 'vid_happy_horse_t2v',
     tool: 'video.create',
-    label: 'HappyHorse Text-to-Video',
+    label: 'HappyHorse 1.1 Text-to-Video',
     group: 'Video',
     badge: 'Text to video',
-    endpoint: 'alibaba/happy-horse/text-to-video',
+    endpoint: 'alibaba/happy-horse/v1.1/text-to-video',
     provider: 'fal',
     unit: 'second',
     price: 0.14,
@@ -1487,40 +1502,43 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   {
     key: 'vid_grok_video',
     tool: 'video.create',
-    label: 'Grok Imagine Video 1.5',
+    label: 'Grok Imagine Video',
     group: 'Video',
     badge: 'Quality',
-    endpoint: 'xai/grok-imagine-video/v1.5/text-to-video',
+    endpoint: 'xai/grok-imagine-video/text-to-video',
     provider: 'fal',
     unit: 'second',
     price: 0.07,
-    priceNote: 'about 0.07 per second',
+    priceNote: '480p $0.05/s, 720p $0.07/s',
     priceVerifiedOn: '',
     mode: 'draft',
     inputMap: {},
     outputType: 'video',
-    maxDuration: 10,
+    resolutions: ['480p', '720p'],
+    formats: ['16:9', '4:3', '3:2', '1:1', '2:3', '3:4', '9:16'],
+    maxDuration: 15,
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'vid_gemini_omni',
     tool: 'video.create',
-    label: 'Gemini Omni Flash 1.2',
+    label: 'Gemini Omni Flash',
     group: 'Video',
     badge: 'Omni',
-    endpoint: 'google/gemini-omni-flash/v1.2/text-to-video',
+    endpoint: 'google/gemini-omni-flash',
     provider: 'fal',
     unit: 'second',
     price: 0.10,
-    priceNote: 'Check price on fal (text-to-video only)',
+    priceNote: 'Estimate $0.10/s, check price on fal',
     priceVerifiedOn: '',
     mode: 'final',
     inputMap: {},
     outputType: 'video',
+    formats: ['16:9', '9:16'],
     maxDuration: 10,
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [10] FLUX 3 - image to video
@@ -2074,20 +2092,20 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   {
     key: 'voice_changer',
     tool: 'audio.voice_change',
-    label: 'ElevenLabs Voice Changer (Not connected yet)',
+    label: 'Voice changer (Chatterbox HD)',
     group: 'Voice',
-    badge: 'Disabled',
-    endpoint: 'fal-ai/elevenlabs/voice-changer',
+    badge: 'Voice changer',
+    endpoint: 'resemble-ai/chatterboxhd/speech-to-speech',
     provider: 'fal',
-    unit: 'minute',
-    price: 0.30,
-    priceNote: '$0.30 per minute',
+    unit: 'generation',
+    price: 0.03,
+    priceNote: 'Estimate $0.03 per call',
     priceVerifiedOn: '',
     mode: 'final',
     inputMap: {},
     outputType: 'audio',
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'dubbing_eleven',
@@ -2417,6 +2435,9 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     enabled: true,
   },
 ];
+
+/** Base models plus the batches C01 to C15 (extraModels.ts). */
+export const MODEL_REGISTRY: ModelRegistryEntry[] = [...BASE_REGISTRY, ...EXTRA_MODELS];
 
 /**
  * Derives inputKind ('text' | 'image' | 'both' | 'video' | 'audio') from endpoint and tool

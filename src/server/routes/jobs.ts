@@ -10,6 +10,9 @@ import {
 import * as falService from '../services/fal.ts';
 import * as mediaProcessing from '../services/mediaProcessing.ts';
 import { inMemoryVoices } from './voices.ts';
+import { mapExtraModelInput } from './falMappers.ts';
+import { getExtraPricing } from './extraPricing.ts';
+import { collectAudioFiles, collectStemFiles, chunksToWords } from './extraOutputs.ts';
 
 export const jobsRouter = express.Router();
 
@@ -41,6 +44,7 @@ const createJobSchema = z.object({
     'audio.burn_captions',
     'audio.voiceClone',
     'audio.voiceDesign',
+    'audio.separate',
   ]),
   modelKey: z.string().min(1),
   input: z.record(z.string(), z.any()),
@@ -320,6 +324,9 @@ export function normalizeInputForModel(
  * Maps standard studio inputs to fal.ai endpoint schema
  */
 function mapInputToFal(modelKey: string, endpoint: string, input: Record<string, any>, units: number) {
+  // Models connected in batches C01 to C15 are handled in falMappers.ts
+  const extraPayload = mapExtraModelInput(endpoint, input, units);
+  if (extraPayload) return extraPayload;
   // [1] MiniMax H3 Max - text to video
   if (endpoint === 'minimax/h3-max/text-to-video') {
     const payload: Record<string, any> = {
@@ -385,7 +392,7 @@ function mapInputToFal(modelKey: string, endpoint: string, input: Record<string,
   // [5] Kling 3.0 Pro - text to video (Draft default: duration 3, generate_audio false)
   if (endpoint === 'fal-ai/kling-video/v3/pro/text-to-video') {
     const payload: Record<string, any> = {
-      duration: Number(input.duration || 3),
+      duration: String(Number(input.duration || 3)),
       aspect_ratio: input.aspect_ratio || '16:9',
       generate_audio: input.generate_audio ?? false,
       negative_prompt: input.negative_prompt || 'blur, distort, and low quality',
@@ -405,7 +412,7 @@ function mapInputToFal(modelKey: string, endpoint: string, input: Record<string,
   if (endpoint === 'fal-ai/kling-video/v3/standard/image-to-video') {
     const payload: Record<string, any> = {
       start_image_url: input.start_image_url || input.startImageUrl || input.image_url || input.imageUrl,
-      duration: Number(input.duration || 5),
+      duration: String(Number(input.duration || 5)),
       generate_audio: input.generate_audio ?? true,
       negative_prompt: input.negative_prompt || 'blur, distort, and low quality',
       cfg_scale: Number(input.cfg_scale ?? 0.5),
@@ -1291,6 +1298,9 @@ jobsRouter.post('/', requireOwnerAuth, async (req: AuthenticatedRequest, res: ex
     'musicUrl',
     'sfx_url',
     'sfxUrl',
+    'source_audio_url',
+    'target_voice_audio_url',
+    'tail_image_url',
   ];
   for (const k of mediaUrlKeys) {
     const val = input[k];
@@ -1447,6 +1457,13 @@ jobsRouter.post('/', requireOwnerAuth, async (req: AuthenticatedRequest, res: ex
       : typeof input.num_images === 'number'
       ? input.num_images
       : 1;
+  }
+
+  // Price rules for the models connected in batches C01 to C15 (extraPricing.ts)
+  const extraPrice = getExtraPricing(model, input);
+  if (extraPrice) {
+    priceRate = extraPrice.rate;
+    units = extraPrice.units;
   }
 
   const estCostUsd = calculateJobCost(priceRate, units);
@@ -2216,6 +2233,35 @@ async function reconcileJobWithFal(job: any, isFirestore: boolean): Promise<any>
               resolution,
               format,
             });
+
+            // HeyGen Avatar V can return a caption file (SRT): save it as a second asset
+            const captionUrl = data.caption_file?.url;
+            if (captionUrl) {
+              const capId = `asset_${job.id}_cap`;
+              const capDoc = {
+                id: capId,
+                uid,
+                url: captionUrl,
+                type: 'caption',
+                title: `${(job.input?.prompt || 'Captions').slice(0, 50)} (captions)`,
+                tool: job.tool,
+                modelKey: job.modelKey,
+                parentAssetId: assetId,
+                projectId: job.projectId || null,
+                metadata: { format: 'srt' },
+                createdAt: now,
+              };
+              if (isFirestore) {
+                try {
+                  await adminDb.collection('assets').doc(capId).set(capDoc);
+                } catch {
+                  inMemoryAssets.set(capId, capDoc);
+                }
+              } else {
+                inMemoryAssets.set(capId, capDoc);
+              }
+              outputs.push({ assetId: capId, url: captionUrl, type: 'caption' });
+            }
           }
         } else if (job.tool?.startsWith('audio')) {
           // Audio outputs (Voice Clone/Design, TTS, Dialogue, SFX, Music, STT, Voice change)
@@ -2253,9 +2299,39 @@ async function reconcileJobWithFal(job: any, isFirestore: boolean): Promise<any>
               provider: 'minimax',
               url: audioSampleUrl,
             });
+          } else if (job.tool === 'audio.separate') {
+            // Demucs: one file per stem, each saved as its own audio asset
+            const stems = collectStemFiles(data);
+            const baseTitle = String(job.input?.title || job.input?.fileName || 'Audio').slice(0, 40);
+            for (let si = 0; si < stems.length; si++) {
+              const stemId = `asset_${job.id}_${si}`;
+              const stemDoc = {
+                id: stemId,
+                uid,
+                url: stems[si].url,
+                type: 'audio',
+                title: `${baseTitle} - ${stems[si].name}`,
+                tool: job.tool,
+                modelKey: job.modelKey,
+                parentAssetId: job.input?.assetId || job.input?.parentAssetId || null,
+                projectId: job.projectId || null,
+                metadata: { stem: stems[si].name },
+                createdAt: now,
+              };
+              if (isFirestore) {
+                try {
+                  await adminDb.collection('assets').doc(stemId).set(stemDoc);
+                } catch {
+                  inMemoryAssets.set(stemId, stemDoc);
+                }
+              } else {
+                inMemoryAssets.set(stemId, stemDoc);
+              }
+              outputs.push({ assetId: stemId, url: stems[si].url, type: 'audio', stem: stems[si].name, title: stemDoc.title });
+            }
           } else if (job.tool === 'audio.stt') {
             const transcriptText = data.text || (typeof data === 'string' ? data : '');
-            const words = data.words || [];
+            const words = (data.words && data.words.length ? data.words : chunksToWords(data.chunks)) || [];
             const detectedLanguage = data.language_code || data.language || data.detected_language || job.input?.language_code || 'auto';
             if (transcriptText || words.length > 0) {
               const assetId = `asset_${job.id}_0`;
@@ -2298,8 +2374,9 @@ async function reconcileJobWithFal(job: any, isFirestore: boolean): Promise<any>
               });
             }
           } else {
+            const audioFiles = collectAudioFiles(data);
             const audioObj = data.audio || data.audio_file || data.output || data.audio_url || data.file;
-            let rawAudioUrl = typeof audioObj === 'string' ? audioObj : audioObj?.url || data.url;
+            let rawAudioUrl = audioFiles[0]?.url || (typeof audioObj === 'string' ? audioObj : audioObj?.url || data.url);
 
             if (rawAudioUrl) {
               const requestedFmt = job.input?.output_format;
@@ -2355,6 +2432,34 @@ async function reconcileJobWithFal(job: any, isFirestore: boolean): Promise<any>
                 type: 'audio',
                 format: job.input?.output_format || 'mp3',
               });
+
+              // Extra tracks or alternatives (Sonilo, Mirelo): every file becomes its own asset
+              for (let ai = 1; ai < audioFiles.length; ai++) {
+                const altId = `asset_${job.id}_${ai}`;
+                const altDoc = {
+                  id: altId,
+                  uid,
+                  url: audioFiles[ai].url,
+                  type: 'audio',
+                  title: `${(job.input?.text || job.input?.prompt || job.input?.title || 'Generated Audio').slice(0, 50)} (${ai + 1})`,
+                  tool: job.tool,
+                  modelKey: job.modelKey,
+                  parentAssetId: job.input?.assetId || job.input?.parentAssetId || null,
+                  projectId: job.projectId || null,
+                  metadata: { prompt: job.input?.prompt || job.input?.text, alternative: true },
+                  createdAt: now,
+                };
+                if (isFirestore) {
+                  try {
+                    await adminDb.collection('assets').doc(altId).set(altDoc);
+                  } catch {
+                    inMemoryAssets.set(altId, altDoc);
+                  }
+                } else {
+                  inMemoryAssets.set(altId, altDoc);
+                }
+                outputs.push({ assetId: altId, url: audioFiles[ai].url, type: 'audio', format: 'mp3' });
+              }
             }
           }
         } else {
