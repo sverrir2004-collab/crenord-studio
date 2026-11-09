@@ -622,15 +622,41 @@ export function mapExtraModelInput(endpoint: string, input: In, units: number): 
       return p;
     }
 
-    case 'fal-ai/minimax/speech-2.8-turbo': {
-      const p: In = {
-        prompt: input.prompt || input.text || '',
+    case 'fal-ai/minimax/speech-2.6-hd':
+    case 'fal-ai/minimax/speech-2.6-turbo': {
+      const vs: In = {
         voice_id: input.voice_id || input.voice || 'Wise_Woman',
-        speed: Number(input.speed ?? 1.0),
+        speed: clamp(Number(input.speed ?? 1.0), 0.5, 2),
         emotion: input.emotion || 'neutral',
       };
-      if (input.vol !== undefined) p.vol = Number(input.vol);
-      if (input.pitch !== undefined) p.pitch = Number(input.pitch);
+      if (input.vol !== undefined) vs.vol = Number(input.vol);
+      if (input.pitch !== undefined) vs.pitch = Math.round(Number(input.pitch));
+      return {
+        prompt: input.prompt || input.text || '',
+        voice_setting: vs,
+        language_boost: 'auto',
+        output_format: 'url',
+      };
+    }
+    case 'fal-ai/vibevoice/7b': {
+      const preset = String(input.voice || 'Alice [EN]');
+      const speaker: In = input.audio_url ? { audio_url: input.audio_url } : { preset };
+      const p: In = {
+        script: input.text || input.prompt || '',
+        speakers: [speaker],
+        cfg_scale: Number(input.cfg_scale ?? 1.3),
+      };
+      if (input.seed !== undefined) p.seed = Number(input.seed);
+      return p;
+    }
+    case 'fal-ai/f5-tts': {
+      const p: In = {
+        gen_text: String(input.text || input.prompt || '').slice(0, 5000),
+        ref_audio_url: first(input.audio_url, input.ref_audio_url),
+        model_type: 'F5-TTS',
+        remove_silence: true,
+      };
+      if (input.ref_text) p.ref_text = input.ref_text;
       return p;
     }
     case 'fal-ai/kokoro/american-english':

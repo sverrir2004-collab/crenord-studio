@@ -188,8 +188,14 @@ export function getExtraPricing(
     case 'elevenlabs/tts/eleven-v4-turbo':
       return { rate: 0.00005, units: Math.max(1, String(input.text || input.prompt || '').length) };
 
-    case 'fal-ai/minimax/speech-2.8-turbo':
+    case 'fal-ai/minimax/speech-2.6-hd':
+      return { rate: 0.10, units: Math.max(0.001, String(input.text || input.prompt || '').length / 1000) };
+    case 'fal-ai/minimax/speech-2.6-turbo':
       return { rate: 0.06, units: Math.max(0.001, String(input.text || input.prompt || '').length / 1000) };
+    case 'fal-ai/vibevoice/7b':
+      return { rate: 0.04, units: Math.max(0.001, String(input.text || input.prompt || '').length / 1000) };
+    case 'fal-ai/f5-tts':
+      return { rate: 0.02, units: Math.max(0.001, String(input.text || input.prompt || '').length / 1000) };
     case 'fal-ai/kokoro/american-english':
       return { rate: 0.02, units: Math.max(0.001, String(input.text || input.prompt || '').length / 1000) };
     case 'fal-ai/orpheus-tts':

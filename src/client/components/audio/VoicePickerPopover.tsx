@@ -83,8 +83,6 @@ export const VOICES_CATALOG: VoiceData[] = [
   { name: 'af_sky', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Light, airy American voice.', tags: ['Kokoro'] },
   { name: 'am_adam', gender: 'Male', style: 'Narration', accent: 'Kokoro', description: 'Clear, steady American voice.', tags: ['Kokoro'] },
   { name: 'am_michael', gender: 'Male', style: 'Narration', accent: 'Kokoro', description: 'Warm, mature American voice.', tags: ['Kokoro'] },
-  { name: 'bf_emma', gender: 'Female', style: 'Narration', accent: 'Kokoro', description: 'Polished British voice.', tags: ['Kokoro'] },
-  { name: 'bm_george', gender: 'Male', style: 'Narration', accent: 'Kokoro', description: 'Warm British voice.', tags: ['Kokoro'] },
   { name: 'tara', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
   { name: 'leah', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
   { name: 'jess', gender: 'Female', style: 'Conversational', accent: 'Orpheus', description: 'Natural, emotive Orpheus voice.', tags: ['Orpheus'] },
@@ -105,10 +103,11 @@ export function voicesForModel(family: string): VoiceData[] {
     case 'xai': return byAccent('xAI');
     case 'kokoro': return byAccent('Kokoro');
     case 'orpheus': return byAccent('Orpheus');
+    case 'vibevoice': return byAccent('VibeVoice');
     case 'reference': return [];
     default:
       return VOICES_CATALOG.filter(
-        (v) => !['MiniMax HD', 'Google Gemini', 'Inworld', 'xAI', 'Kokoro', 'Orpheus'].includes(v.accent)
+        (v) => !['MiniMax HD', 'Google Gemini', 'Inworld', 'xAI', 'Kokoro', 'Orpheus', 'VibeVoice'].includes(v.accent)
       );
   }
 }

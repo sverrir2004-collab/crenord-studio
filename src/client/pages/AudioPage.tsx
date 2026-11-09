@@ -44,6 +44,7 @@ import {
   SeparatePanel,
   TalkingPhotoPanel,
   AudioToVideoPanel,
+  ReferenceClip,
 } from '../components/audio/ExtraVoiceTools.tsx';
 import { buildCues, toSrt, toVtt } from '../lib/captions.ts';
 import { useReviewState } from '../lib/useReviewState.ts';
@@ -888,6 +889,9 @@ export const AudioPage: React.FC = () => {
             base.sample_rate_hertz = inworldSampleRate;
           } else if (selectedModel === 'tts_kokoro') {
             base.speed = speed;
+          } else if (selectedModel === 'tts_f5') {
+            if (!chatterboxAudioUrl.trim()) throw new Error('F5-TTS needs a voice clip. Upload one first.');
+            base.audio_url = chatterboxAudioUrl.trim();
           } else if (selectedModel === 'tts_xai') {
             if (langCode && langCode !== 'auto') base.language = langCode;
           } else if (selectedModel === 'tts_chatterbox') {
@@ -2299,8 +2303,16 @@ export const AudioPage: React.FC = () => {
               {ttsModelInfo(selectedModel).family === 'reference' && (
                 <div className="p-3.5 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)]">
                   <p className="text-[11px] text-[var(--text-tertiary)]">
-                    This model has no ready voices. It copies the voice from a short audio clip, which you add in the settings below.
+                    This model has no ready voices. It copies the voice from a short audio clip. Upload one below.
                   </p>
+                  <div className="mt-3">
+                    <ReferenceClip
+                      onUrl={(u) => {
+                        if (selectedModel === 'tts_index_tts2') setIndexTtsAudioUrl(u);
+                        else setChatterboxAudioUrl(u);
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 

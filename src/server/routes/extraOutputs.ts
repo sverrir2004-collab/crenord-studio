@@ -31,6 +31,7 @@ export function collectAudioFiles(data: AnyObj): Array<{ url: string }> {
   else add(data.audio);
   if (Array.isArray(data.audios)) data.audios.forEach(add);
   add(data.audio_file);
+  if (!Array.isArray(data.audio_url)) add(data.audio_url);
   return out;
 }
 

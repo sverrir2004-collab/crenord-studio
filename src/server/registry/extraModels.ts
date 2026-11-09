@@ -237,9 +237,24 @@ export const EXTRA_MODELS: ModelRegistryEntry[] = [
 
   // ==================== VOICE: more text to speech models ====================
   make({
-    key: 'tts_minimax_28_turbo', tool: 'audio.tts', label: 'MiniMax Speech 2.8 Turbo', group: 'Voice', badge: 'Fast, emotions',
-    endpoint: 'fal-ai/minimax/speech-2.8-turbo', unit: 'character', price: 0.00006,
+    key: 'tts_minimax_26_hd', tool: 'audio.tts', label: 'MiniMax Speech 2.6 HD', group: 'Voice', badge: 'Emotions',
+    endpoint: 'fal-ai/minimax/speech-2.6-hd', unit: 'character', price: 0.0001,
+    priceNote: '$0.10 per 1,000 characters (fal)', mode: 'final', outputType: 'audio', formats: ['mp3'],
+  }),
+  make({
+    key: 'tts_minimax_26_turbo', tool: 'audio.tts', label: 'MiniMax Speech 2.6 Turbo', group: 'Voice', badge: 'Fast',
+    endpoint: 'fal-ai/minimax/speech-2.6-turbo', unit: 'character', price: 0.00006,
     priceNote: 'Estimate $0.06 per 1,000 characters', mode: 'draft', outputType: 'audio', formats: ['mp3'],
+  }),
+  make({
+    key: 'tts_vibevoice_7b', tool: 'audio.tts', label: 'VibeVoice 7B', group: 'Voice', badge: 'Long form',
+    endpoint: 'fal-ai/vibevoice/7b', unit: 'character', price: 0.00004,
+    priceNote: 'Estimate $0.04 per 1,000 characters. Long scripts and several speakers', mode: 'draft', outputType: 'audio', formats: ['wav'],
+  }),
+  make({
+    key: 'tts_f5', tool: 'audio.tts', label: 'F5-TTS (voice from clip)', group: 'Voice', badge: 'Clone',
+    endpoint: 'fal-ai/f5-tts', unit: 'character', price: 0.00002,
+    priceNote: 'Estimate $0.02 per 1,000 characters. Needs a reference clip', mode: 'draft', outputType: 'audio', formats: ['wav'],
   }),
   make({
     key: 'tts_kokoro', tool: 'audio.tts', label: 'Kokoro (American English)', group: 'Voice', badge: 'Very cheap',

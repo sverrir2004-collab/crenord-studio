@@ -961,3 +961,27 @@ export const TryOnPanel: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitted
     </div>
   );
 };
+
+// ---------- Reference clip upload for models that copy a voice ----------
+
+export const ReferenceClip: React.FC<{ onUrl: (url: string) => void }> = ({ onUrl }) => {
+  const [clip, setClip] = useState<Uploaded | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  return (
+    <div className="space-y-2">
+      <FileSlot
+        title="Voice clip"
+        accept="audio/*"
+        maxSizeMb={20}
+        caption="5 to 30 seconds of clear speech"
+        value={clip}
+        onChange={(f) => {
+          setClip(f);
+          onUrl(f ? f.url : '');
+        }}
+        onError={setErr}
+      />
+      {err && <p className="text-[11px] text-[var(--danger)]">{err}</p>}
+    </div>
+  );
+};
