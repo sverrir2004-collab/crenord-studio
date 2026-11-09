@@ -10,7 +10,7 @@ service cloud.firestore {
       return request.auth != null && (
         request.auth.token.email == "SERVER_ACCOUNT_EMAIL" ||
         request.auth.token.email == "server@crenord.app" ||
-        request.auth.token.email == "bjarkasonsverrir@gmail.com"
+        request.auth.token.email == "sverrir535@gmail.com"
       );
     }
 
