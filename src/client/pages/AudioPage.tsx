@@ -1247,6 +1247,31 @@ export const AudioPage: React.FC = () => {
                 </p>
               </div>
 
+              {/* Model and voice, always visible (also on smaller screens) */}
+              <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
+                <div>
+                  <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">Model</span>
+                  <TtsModelPicker value={selectedModel} onChange={setSelectedModel} />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider block mb-1">Voice</span>
+                  {ttsModelInfo(selectedModel).family === 'reference' ? (
+                    <div className="h-[calc(100%-1.25rem)] p-3 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-buttons)] text-[11px] text-[var(--text-tertiary)]">
+                      Uses a voice clip you upload in Settings
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsVoicePickerOpen(true)}
+                      className="w-full h-[calc(100%-1.25rem)] min-h-[64px] p-3 text-left bg-[var(--bg-2)] border border-[var(--border-subtle)] hover:border-[var(--accent)] rounded-[var(--radius-buttons)] cursor-pointer transition-colors"
+                    >
+                      <div className="text-[13px] font-semibold text-[var(--text-primary)] truncate">{activeVoiceObj.name}</div>
+                      <div className="text-[11px] text-[var(--accent)]">Change ({modelVoices.length} voices)</div>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Big writing box */}
               <div className="flex-1 flex flex-col min-h-[300px] bg-[var(--bg-2)] border border-[var(--border-subtle)] focus-within:border-[var(--accent)] rounded-[var(--radius-cards)] p-4 relative shadow-sm transition-all">
                 <textarea
