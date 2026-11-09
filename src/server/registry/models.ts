@@ -499,7 +499,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'image',
     commercialOk: false,
-    enabled: false, // Text-to-image id not found per user instructions
+    enabled: true,
   },
   {
     // [29] Krea 3
@@ -564,7 +564,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     tool: 'image.create',
     label: 'FLUX.2 klein 9B',
     group: 'Image',
-    badge: 'Disabled',
+    badge: 'Cheap',
     endpoint: 'fal-ai/flux-2/klein/9b',
     provider: 'fal',
     unit: 'megapixel',
@@ -575,7 +575,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'image',
     commercialOk: false,
-    enabled: false, // DISABLED per CRENORD OVERRIDES
+    enabled: true,
   },
 
   // ==================== IMAGE - edit ====================
@@ -677,7 +677,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     },
     outputType: 'image',
     commercialOk: false,
-    enabled: false, // License unconfirmed per CRENORD NOTES
+    enabled: true,
   },
   {
     key: 'edit_gpt',
@@ -919,7 +919,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'image',
     commercialOk: false,
-    enabled: false, // Disabled until user pastes llms.txt schema
+    enabled: true,
   },
 
   // ==================== IMAGE - background, upscale, clean ====================
@@ -962,7 +962,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'image',
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'bg_birefnet_v2',
@@ -980,7 +980,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'image',
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'up_clarity',
@@ -1497,7 +1497,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     outputType: 'video',
     maxDuration: 10,
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'vid_grok_video',
@@ -1667,7 +1667,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     outputType: 'video',
     maxDuration: 30,
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'vclean_void',
@@ -1815,7 +1815,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'video',
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     // [16] Video Upscaler
@@ -2002,9 +2002,9 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
   {
     key: 'tts_eleven_v4_turbo',
     tool: 'audio.tts',
-    label: 'ElevenLabs v4 Turbo (Not connected yet)',
+    label: 'ElevenLabs v4 Turbo',
     group: 'Voice',
-    badge: 'Disabled',
+    badge: 'Fast',
     endpoint: 'elevenlabs/tts/eleven-v4-turbo',
     provider: 'fal',
     unit: 'character',
@@ -2015,7 +2015,7 @@ const BASE_REGISTRY: ModelRegistryEntry[] = [
     inputMap: {},
     outputType: 'audio',
     commercialOk: false,
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'tts_dialogue',

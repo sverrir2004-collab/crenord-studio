@@ -170,6 +170,24 @@ export function getExtraPricing(
     case 'fal-ai/wizper':
       return { rate: 0.006, units: Math.max(0.1, (Number(input.duration) || 60) / 60) };
 
+    // ---- Last batch ----
+    case 'alibaba/qwen-image-3/text-to-image':
+      return { rate: 0.035, units: Number(input.variants || input.num_images || 1) };
+    case 'fal-ai/flux-2/klein/9b':
+      return { rate: 0.01, units: Number(input.variants || input.num_images || 1) };
+    case 'fal-ai/fashn/tryon/v1.6':
+      return { rate: 0.075, units: 1 };
+    case 'fal-ai/bria/background/remove':
+      return { rate: 0.03, units: 1 };
+    case 'fal-ai/birefnet/v2':
+      return { rate: 0.02, units: 1 };
+    case 'alibaba/wan-3.0-prime/text-to-video':
+      return { rate: 0.15, units: videoSeconds(input) };
+    case 'bria/video/background-removal/v3':
+      return { rate: 0.14, units: Math.max(1, Number(input.duration) || 5) };
+    case 'elevenlabs/tts/eleven-v4-turbo':
+      return { rate: 0.00005, units: Math.max(1, String(input.text || input.prompt || '').length) };
+
     default:
       return null;
   }

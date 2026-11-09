@@ -37,7 +37,7 @@ import { CostBanner } from '../components/ui/CostBanner.tsx';
 import { Badge } from '../components/ui/Badge.tsx';
 import { useReviewState } from '../lib/useReviewState.ts';
 import { fetchWithAuth } from '../lib/firebase.ts';
-import { MotionTransferPanel } from '../components/audio/ExtraVoiceTools.tsx';
+import { MotionTransferPanel, TryOnPanel } from '../components/audio/ExtraVoiceTools.tsx';
 
 export interface VersionItem {
   id: string;
@@ -50,7 +50,7 @@ export interface VersionItem {
   type: 'image' | 'video';
 }
 
-type ImageToolId = 'ai-edit' | 'bg-replace' | 'bg-remove' | 'upscale' | 'resize-ads';
+type ImageToolId = 'tryon' | 'ai-edit' | 'bg-replace' | 'bg-remove' | 'upscale' | 'resize-ads';
 type VideoToolId = 'motion' | 'vedit' | 'extend' | 'vupscale' | 'trim' | 'reformat';
 type ToolId = ImageToolId | VideoToolId;
 
@@ -141,6 +141,15 @@ export const EditPage: React.FC = () => {
 
   // Tool Definitions
   const imageTools: ToolConfig[] = [
+    {
+      id: 'tryon',
+      name: 'Virtual try-on',
+      category: 'ai',
+      help: 'Put a garment on a person',
+      badge: '~$0.08',
+      badgeVariant: 'accent',
+      icon: <Sparkles size={16} strokeWidth={1.75} />,
+    },
     {
       id: 'ai-edit',
       name: 'AI Edit',
@@ -1258,9 +1267,9 @@ export const EditPage: React.FC = () => {
           </div>
         </aside>
 
-        {activeTool === 'motion' ? (
+        {activeTool === 'motion' || activeTool === 'tryon' ? (
           <div className="lg:col-span-2">
-            <MotionTransferPanel />
+            {activeTool === 'motion' ? <MotionTransferPanel /> : <TryOnPanel />}
           </div>
         ) : (
           <>

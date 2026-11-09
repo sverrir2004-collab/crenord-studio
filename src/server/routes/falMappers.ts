@@ -557,6 +557,71 @@ export function mapExtraModelInput(endpoint: string, input: In, units: number): 
       return { prompt: input.prompt, image_size: size, num_images: units };
     }
 
+
+    // ---------- Last batch: previously disabled models ----------
+    case 'alibaba/qwen-image-3/text-to-image':
+    case 'fal-ai/flux-2/klein/9b': {
+      const sizes = ['square_hd', 'square', 'landscape_4_3', 'portrait_4_3', 'landscape_16_9', 'portrait_16_9'];
+      const map: Record<string, string> = {
+        '1:1': 'square_hd', '4:3': 'landscape_4_3', '3:4': 'portrait_4_3', '4:5': 'portrait_4_3',
+        '16:9': 'landscape_16_9', '9:16': 'portrait_16_9',
+      };
+      const raw = String(first(input.format, input.aspect_ratio) || '');
+      const size = sizes.includes(input.image_size) ? input.image_size : map[raw] || 'square_hd';
+      return { prompt: input.prompt, image_size: size, num_images: units, output_format: 'png', enable_safety_checker: true };
+    }
+    case 'fal-ai/fashn/tryon/v1.6': {
+      return {
+        model_image: first(input.model_image, input.image_url, input.imageUrl),
+        garment_image: first(input.garment_image, input.garment_url, input.reference_image_url, input.image_url_2),
+        category: input.category || 'auto',
+        mode: input.mode || 'balanced',
+        garment_photo_type: input.garment_photo_type || 'auto',
+        num_samples: 1,
+        output_format: 'png',
+      };
+    }
+    case 'fal-ai/bria/background/remove':
+      return { image_url: first(input.image_url, input.imageUrl) };
+    case 'fal-ai/birefnet/v2':
+      return {
+        image_url: first(input.image_url, input.imageUrl),
+        model: 'General Use (Light)',
+        operating_resolution: '1024x1024',
+        output_format: 'png',
+        refine_foreground: true,
+      };
+    case 'alibaba/wan-3.0-prime/text-to-video': {
+      const p: In = {
+        prompt: String(input.prompt || '').slice(0, 5000),
+        resolution: resolution(input, ['480p', '720p', '1080p'], '480p'),
+        aspect_ratio: aspect(input, ['16:9', '4:3', '1:1', '3:4', '9:16'], '16:9'),
+        duration: clamp(secs(input.duration, 5), 2, 15),
+        audio: input.audio ?? input.generate_audio ?? true,
+        enable_prompt_expansion: input.enable_prompt_expansion ?? true,
+      };
+      if (input.seed !== undefined) p.seed = input.seed;
+      return p;
+    }
+    case 'bria/video/background-removal/v3':
+      return {
+        video_url: first(input.video_url, input.videoUrl),
+        background_color: input.background_color || 'Transparent',
+        output_container_and_codec: input.output_container_and_codec || 'webm_vp9',
+      };
+    case 'elevenlabs/tts/eleven-v4-turbo': {
+      const p: In = {
+        text: input.text || input.prompt || '',
+        voice: input.voice || 'Rachel',
+        stability: Number(input.stability ?? 0.5),
+        similarity_boost: Number(input.similarity_boost ?? 0.75),
+      };
+      if (input.speed !== undefined) p.speed = Number(input.speed);
+      if (input.language_code && input.language_code !== 'auto') p.language_code = input.language_code;
+      if (input.seed !== undefined) p.seed = Number(input.seed);
+      return p;
+    }
+
     // ---------- Audio: music ----------
     case 'sonilo/v1.1/text-to-music': {
       const sec = Number(input.duration || (input.music_length_ms ? input.music_length_ms / 1000 : 30));

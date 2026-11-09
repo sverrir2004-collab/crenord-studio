@@ -910,3 +910,54 @@ export const MotionTransferPanel: React.FC<{ onSubmitted?: () => void }> = ({ on
     </div>
   );
 };
+
+// ---------- VIRTUAL TRY-ON (FASHN) ----------
+
+export const TryOnPanel: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitted }) => {
+  const [person, setPerson] = useState<Uploaded | null>(null);
+  const [garment, setGarment] = useState<Uploaded | null>(null);
+  const [category, setCategory] = useState<'auto' | 'tops' | 'bottoms' | 'one-pieces'>('auto');
+  const { run, working, error, setError, job } = useRunner(onSubmitted);
+
+  const start = () =>
+    run({
+      tool: 'image.edit',
+      modelKey: 'edit_tryon_fashn',
+      input: { model_image: person!.url, image_url: person!.url, garment_image: garment!.url, category },
+    });
+
+  return (
+    <div className="space-y-4">
+      <Header title="Virtual try-on" text="Put a piece of clothing from one picture on the person in another." />
+      <div className={cardCls}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FileSlot title="1. Person" accept="image/*" maxSizeMb={20} caption="Full or half body, facing the camera" value={person} onChange={setPerson} onError={setError} />
+          <FileSlot title="2. Garment" accept="image/*" maxSizeMb={20} caption="The clothing, on a plain background" value={garment} onChange={setGarment} onError={setError} />
+        </div>
+        <div>
+          <span className={labelCls}>Type of garment</span>
+          <Segmented
+            value={category}
+            onChange={setCategory}
+            options={[
+              { id: 'auto', label: 'Auto' },
+              { id: 'tops', label: 'Top' },
+              { id: 'bottoms', label: 'Bottom' },
+              { id: 'one-pieces', label: 'Dress / one-piece' },
+            ]}
+          />
+        </div>
+      </div>
+      <Footer
+        label="Try it on"
+        working={working}
+        disabled={!person || !garment}
+        reason={!person ? 'Upload the person' : 'Upload the garment'}
+        cost="Estimated cost: about $0.08"
+        error={error}
+        job={job}
+        onClick={start}
+      />
+    </div>
+  );
+};
