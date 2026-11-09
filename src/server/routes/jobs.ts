@@ -2694,14 +2694,17 @@ jobsRouter.get('/', requireOwnerAuth, async (req: AuthenticatedRequest, res: exp
   const limit = Math.min(50, parseInt(req.query.limit as string) || 20);
 
   try {
+    // No orderBy here on purpose: where(uid) + orderBy(createdAt) needs a composite index in Firestore,
+    // and without it the query fails and the list silently falls back to memory (lost on restart).
     const snap = await adminDb
       .collection('jobs')
       .where('uid', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
       .get();
 
-    let jobs = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    let jobs = snap.docs
+      .map((doc: any) => ({ id: doc.id, ...doc.data() }))
+      .sort((a: any, b: any) => (String(b.createdAt || '') > String(a.createdAt || '') ? 1 : -1))
+      .slice(0, limit);
 
     // Reconcile any in-flight jobs on listing so restarts / fresh page loads update active status
     const inFlight = jobs.filter((j: any) => j.status === 'queued' || j.status === 'running');
