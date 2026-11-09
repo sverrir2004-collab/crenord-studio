@@ -66,5 +66,6 @@ export async function upload(buffer: Buffer, mimeType: string, filename?: string
   if (filename) {
     (blob as any).name = filename;
   }
-  return await fal.storage.upload(blob);
+  // expiresIn 'never': uploaded and processed files must not be deleted by fal after a default period.
+  return await fal.storage.upload(blob, { lifecycle: { expiresIn: 'never' } });
 }

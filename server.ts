@@ -36,6 +36,12 @@ async function startServer() {
     });
   }
 
+  // Finish running jobs in the background so results are saved even when the browser tab is closed.
+  const { sweepInFlightJobs } = await import('./src/server/routes/jobs.ts');
+  setInterval(() => {
+    sweepInFlightJobs().catch(() => {});
+  }, 15000);
+
   app.listen(port, '0.0.0.0', () => {
     console.log(`CRENORD server running on port ${port}`);
   });

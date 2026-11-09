@@ -2686,6 +2686,42 @@ jobsRouter.patch('/:id/feedback', requireOwnerAuth, async (req: AuthenticatedReq
 });
 
 /**
+ * Background sweep: finishes jobs that are still queued or running at fal, even if nobody has the
+ * page open. Called every few seconds from server.ts. Safe to call repeatedly (reconcile is locked per job).
+ */
+let sweepRunning = false;
+export async function sweepInFlightJobs(): Promise<number> {
+  if (sweepRunning) return 0;
+  sweepRunning = true;
+  let handled = 0;
+  try {
+    let jobs: any[] = [];
+    let isFirestore = true;
+    try {
+      const [q, r] = await Promise.all([
+        adminDb.collection('jobs').where('status', '==', 'queued').get(),
+        adminDb.collection('jobs').where('status', '==', 'running').get(),
+      ]);
+      jobs = [...q.docs, ...r.docs].map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    } catch {
+      isFirestore = false;
+      jobs = Array.from(inMemoryJobs.values()).filter((j: any) => j.status === 'queued' || j.status === 'running');
+    }
+    for (const job of jobs.slice(0, 25)) {
+      try {
+        await reconcileJobWithFal(job, isFirestore);
+        handled++;
+      } catch {
+        // one bad job must not stop the others
+      }
+    }
+  } finally {
+    sweepRunning = false;
+  }
+  return handled;
+}
+
+/**
  * GET /api/jobs?limit=50
  * Returns recent jobs for the authenticated owner, reconciled with Firestore and fal.ai.
  */
