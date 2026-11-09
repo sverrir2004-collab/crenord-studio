@@ -48,15 +48,53 @@ const webAuth = getWebAuth(webApp);
 setPersistence(webAuth, inMemoryPersistence).catch(() => {});
 
 let isSigningIn = false;
+let lastSignInProblem = '';
 let hasLoggedMissingEnv = false;
+
+/**
+ * Reads a server environment variable. Tolerates stray spaces or different letter case in the
+ * secret NAME (for example "SERVER_DB_EMAIL " typed into the Secrets panel) and a few aliases.
+ */
+const SERVER_ENV_ALIASES: Record<string, string[]> = {
+  SERVER_DB_EMAIL: ['SERVER_DB_EMAIL', 'SERVER_DB_USER', 'FIREBASE_SERVER_EMAIL', 'SERVER_EMAIL'],
+  SERVER_DB_PASSWORD: ['SERVER_DB_PASSWORD', 'SERVER_DB_PASS', 'FIREBASE_SERVER_PASSWORD', 'SERVER_PASSWORD'],
+};
+
+export function getServerEnv(name: 'SERVER_DB_EMAIL' | 'SERVER_DB_PASSWORD'): string | undefined {
+  const wanted = SERVER_ENV_ALIASES[name].map((n) => n.toUpperCase());
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value && wanted.includes(key.trim().toUpperCase().replace(/[\s-]+/g, '_'))) {
+      return name === 'SERVER_DB_EMAIL' ? value.trim() : value;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Safe diagnostic: says which secrets the running server can see. Names only, never values.
+ */
+export function describeServerEnv(): string {
+  const has = (n: string) => (process.env[n] ? 'yes' : 'no');
+  const related = Object.keys(process.env)
+    .filter((k) => /SERVER|FIREBASE|DB_|OWNER|FAL|GEMINI/i.test(k))
+    .filter((k) => !/^(npm_|NODE_|PATH|PWD|HOME|SHELL|LANG)/i.test(k))
+    .slice(0, 12);
+  return (
+    `Server sees: SERVER_DB_EMAIL=${getServerEnv('SERVER_DB_EMAIL') ? 'yes' : 'no'}, ` +
+    `SERVER_DB_PASSWORD=${getServerEnv('SERVER_DB_PASSWORD') ? 'yes' : 'no'}, ` +
+    `FAL_KEY=${has('FAL_KEY')}, OWNER_EMAIL=${has('OWNER_EMAIL')}. ` +
+    `Secret names it can see: ${related.length ? related.join(', ') : 'none'}. ` +
+    'Secrets are only loaded when the server starts: restart the app after adding them.'
+  );
+}
 
 /**
  * Signs in as the dedicated server account with Firebase Auth.
  * Automatically re-authenticates if expired.
  */
 export async function ensureServerAuthenticated(forceRefresh = false): Promise<boolean> {
-  const email = process.env.SERVER_DB_EMAIL?.trim();
-  const password = process.env.SERVER_DB_PASSWORD;
+  const email = getServerEnv('SERVER_DB_EMAIL');
+  const password = getServerEnv('SERVER_DB_PASSWORD');
 
   if (!email || !password) {
     if (!hasLoggedMissingEnv) {
@@ -86,6 +124,7 @@ export async function ensureServerAuthenticated(forceRefresh = false): Promise<b
     const code = getFirestoreErrorCode(err);
     const cleanMsg = sanitizeFirestoreErrorMessage(err?.message || String(err));
     console.warn(`[Server DB Auth] Failed to sign in (${code}): ${cleanMsg}`);
+    lastSignInProblem = `Sign-in to Firebase failed (${code}). Check that the user exists under Authentication > Users, that Email/Password sign-in is enabled, and that SERVER_DB_EMAIL and SERVER_DB_PASSWORD match exactly.`;
     return false;
   } finally {
     isSigningIn = false;
@@ -98,7 +137,7 @@ export async function ensureServerAuthenticated(forceRefresh = false): Promise<b
  */
 async function withServerAuth<T>(operation: () => Promise<T>): Promise<T> {
   const authed = await ensureServerAuthenticated();
-  if (!authed && (!process.env.SERVER_DB_EMAIL || !process.env.SERVER_DB_PASSWORD)) {
+  if (!authed && (!getServerEnv('SERVER_DB_EMAIL') || !getServerEnv('SERVER_DB_PASSWORD'))) {
     const err: any = new Error('SERVER_DB_EMAIL / SERVER_DB_PASSWORD missing');
     err.code = 'SERVER_LOGIN_MISSING';
     throw err;
@@ -337,8 +376,8 @@ export interface FirestoreCheckResult {
  * Returns { ok: true } on success or { ok: false, code, message } on failure.
  */
 export async function checkFirestore(): Promise<FirestoreCheckResult> {
-  const email = process.env.SERVER_DB_EMAIL?.trim();
-  const password = process.env.SERVER_DB_PASSWORD;
+  const email = getServerEnv('SERVER_DB_EMAIL');
+  const password = getServerEnv('SERVER_DB_PASSWORD');
 
   if (!email || !password) {
     if (!hasLoggedMissingEnv) {
@@ -348,7 +387,7 @@ export async function checkFirestore(): Promise<FirestoreCheckResult> {
     return {
       ok: false,
       code: 'SERVER_LOGIN_MISSING',
-      message: 'SERVER_DB_EMAIL / SERVER_DB_PASSWORD missing',
+      message: describeServerEnv(),
     };
   }
 
@@ -358,7 +397,7 @@ export async function checkFirestore(): Promise<FirestoreCheckResult> {
       return {
         ok: false,
         code: 'SERVER_LOGIN_FAILED',
-        message: 'Failed to sign in as server account with SERVER_DB_EMAIL and SERVER_DB_PASSWORD.',
+        message: lastSignInProblem || 'Failed to sign in as server account with SERVER_DB_EMAIL and SERVER_DB_PASSWORD.',
       };
     }
 

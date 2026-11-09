@@ -293,6 +293,7 @@ export function normalizeInputForModel(
           if (userRes.includes('720') && (rLow.includes('720') || rLow.includes('768'))) return true;
           if (userRes.includes('1080') && rLow.includes('1080')) return true;
           if (userRes.includes('4k') && (rLow.includes('4k') || rLow.includes('2160'))) return true;
+          if ((userRes.includes('2k') || userRes.includes('1440')) && (rLow.includes('2k') || rLow.includes('1440'))) return true;
           return false;
         });
         norm.resolution = partialMatch || modelResolutions[0];

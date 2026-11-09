@@ -67,10 +67,14 @@ export const SettingsPopover: React.FC<SettingsPopoverProps> = ({
       const has480 = lowerResolutions.some((r) => r.includes('480'));
       const has720 = lowerResolutions.some((r) => r.includes('720') || r.includes('768'));
       const has1080 = lowerResolutions.some((r) => r.includes('1080'));
+      const has2k = lowerResolutions.some((r) => r.includes('1440') || r === '2k');
+      const has4k = lowerResolutions.some((r) => r.includes('2160') || r.includes('4k'));
 
       if (has480) options.push({ value: '480p', label: '480p' });
       if (has720) options.push({ value: '720p', label: '720p' });
       if (has1080) options.push({ value: '1080p', label: '1080p' });
+      if (has2k) options.push({ value: '2k', label: '2K' });
+      if (has4k) options.push({ value: '4k', label: '4K' });
 
       if (options.length <= 1) return [];
       return options;

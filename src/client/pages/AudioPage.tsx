@@ -28,12 +28,22 @@ import {
   Search,
   ExternalLink,
   Star,
+  Scissors,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button.tsx';
 import { Dropzone } from '../components/ui/Dropzone.tsx';
 import { AddSoundModal } from '../components/audio/AddSoundModal.tsx';
 import { VoicePickerPopover, VOICES_CATALOG, VoiceData } from '../components/audio/VoicePickerPopover.tsx';
 import { AudioMiniPlayer } from '../components/audio/AudioMiniPlayer.tsx';
+import {
+  MusicPanel,
+  VideoSfxPanel,
+  VoiceChangerPanel,
+  SeparatePanel,
+  TalkingPhotoPanel,
+  AudioToVideoPanel,
+} from '../components/audio/ExtraVoiceTools.tsx';
+import { buildCues, toSrt, toVtt } from '../lib/captions.ts';
 import { useReviewState } from '../lib/useReviewState.ts';
 import { fetchWithAuth } from '../lib/firebase.ts';
 
@@ -79,6 +89,7 @@ export type VoiceTool =
   | 'dubbing'
   | 'lipsync'
   | 'voice_change'
+  | 'separate'
   | 'voices';
 
 export interface DialogueLine {
@@ -87,6 +98,38 @@ export interface DialogueLine {
   voice: string;
   text: string;
 }
+
+/** Left rail: three simple groups, in the order people work. */
+const RAIL_GROUPS: Array<{
+  title: string;
+  items: Array<{ id: VoiceTool; label: string; icon: any; caption: string }>;
+}> = [
+  {
+    title: 'Speech',
+    items: [
+      { id: 'tts', label: 'Text to speech', icon: Mic, caption: 'Voiceover & narration' },
+      { id: 'dialogue', label: 'Dialogue', icon: Users, caption: 'Several speakers' },
+      { id: 'voice_change', label: 'Voice changer', icon: Volume2, caption: 'Swap the speaker' },
+      { id: 'voices', label: 'Voices', icon: UserCheck, caption: 'Library, clone, design' },
+    ],
+  },
+  {
+    title: 'Sound',
+    items: [
+      { id: 'sfx', label: 'Sound effects', icon: Sparkles, caption: 'From text or from video' },
+      { id: 'music', label: 'Music', icon: Music, caption: 'Tracks and songs' },
+      { id: 'separate', label: 'Split audio', icon: Scissors, caption: 'Vocals, drums, bass' },
+    ],
+  },
+  {
+    title: 'Video audio',
+    items: [
+      { id: 'stt', label: 'Speech to text', icon: FileText, caption: 'Transcript & captions' },
+      { id: 'dubbing', label: 'Dubbing', icon: Languages, caption: 'Translate the voice' },
+      { id: 'lipsync', label: 'Lip sync', icon: Film, caption: 'Video, photo or audio' },
+    ],
+  },
+];
 
 export const AudioPage: React.FC = () => {
   const [reviewState] = useReviewState();
@@ -104,6 +147,7 @@ export const AudioPage: React.FC = () => {
         saved === 'dubbing' ||
         saved === 'lipsync' ||
         saved === 'voice_change' ||
+        saved === 'separate' ||
         saved === 'voices'
       ) {
         return saved;
@@ -299,6 +343,8 @@ export const AudioPage: React.FC = () => {
   const [lipsyncAudioUrl, setLipsyncAudioUrl] = useState('');
   const [lipsyncAudioFileName, setLipsyncAudioFileName] = useState('');
   const [lipsyncModel, setLipsyncModel] = useState<'lipsync_syncso' | 'lipsync_kling'>('lipsync_syncso');
+  const [lipsyncMode, setLipsyncMode] = useState<'video' | 'photo' | 'audio2video'>('video');
+  const [sttModel, setSttModel] = useState<'stt_scribe_v2' | 'stt_wizper'>('stt_scribe_v2');
 
   // Tool 8: Voice Changer (Unconnected)
   const [voiceChangeSourceUrl, setVoiceChangeSourceUrl] = useState('');
@@ -617,9 +663,9 @@ export const AudioPage: React.FC = () => {
     if (format === 'txt') {
       content = transcriptResult.text;
     } else if (format === 'srt') {
-      content = `1\n00:00:00,000 --> 00:00:05,000\n${transcriptResult.text}\n`;
+      content = toSrt(buildCues(transcriptResult.words, transcriptResult.text));
     } else if (format === 'vtt') {
-      content = `WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\n${transcriptResult.text}\n`;
+      content = toVtt(buildCues(transcriptResult.words, transcriptResult.text));
       filename = 'transcript.vtt';
     } else if (format === 'json') {
       content = JSON.stringify(transcriptResult, null, 2);
@@ -641,7 +687,7 @@ export const AudioPage: React.FC = () => {
     if (!sttSourceUrl || !transcriptResult) return;
     setIsBurningCaptions(true);
     try {
-      const srtContent = `1\n00:00:00,000 --> 00:00:06,000\n${transcriptResult.text}\n`;
+      const srtContent = toSrt(buildCues(transcriptResult.words, transcriptResult.text));
       await fetchWithAuth('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -700,9 +746,9 @@ export const AudioPage: React.FC = () => {
     }
     if (activeTool === 'stt') {
       if (sttDuration && sttDuration > 0) {
-        return Math.max(0.001, Math.round((sttDuration / 60) * 0.008 * 1000) / 1000);
+        return Math.max(0.001, Math.round((sttDuration / 60) * (sttModel === 'stt_wizper' ? 0.006 : 0.008) * 1000) / 1000);
       }
-      return 0.008;
+      return sttModel === 'stt_wizper' ? 0.006 : 0.008;
     }
     if (activeTool === 'lipsync') {
       const rate = lipsyncModel === 'lipsync_kling' ? 0.14 : 0.10;
@@ -998,14 +1044,15 @@ export const AudioPage: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tool: 'audio.stt',
-            modelKey: 'stt_scribe_v2',
+            modelKey: sttModel,
             input: {
               video_url: isVideo ? sttSourceUrl : undefined,
               audio_url: !isVideo ? sttSourceUrl : undefined,
               duration: sttDuration || undefined,
               language_code: sttLanguage !== 'auto' ? sttLanguage : undefined,
-              tag_audio_events: true,
-              diarize: true,
+              language: sttLanguage !== 'auto' ? sttLanguage : undefined,
+              tag_audio_events: sttModel === 'stt_scribe_v2' ? true : undefined,
+              diarize: sttModel === 'stt_scribe_v2' ? true : undefined,
             },
           }),
         });
@@ -1030,6 +1077,11 @@ export const AudioPage: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Called by the self-contained tool panels after they start a job
+  const afterSubmit = () => {
+    fetchAudioFeed();
   };
 
   // Find active voice object
@@ -1094,17 +1146,7 @@ export const AudioPage: React.FC = () => {
 
       {/* Mobile Horizontal Tool Scroller */}
       <div className="flex md:hidden overflow-x-auto gap-1.5 p-2 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] no-scrollbar shrink-0">
-        {[
-          { id: 'tts', label: 'Text to speech', icon: Mic },
-          { id: 'dialogue', label: 'Dialogue', icon: Users },
-          { id: 'sfx', label: 'Sound effects', icon: Sparkles },
-          { id: 'music', label: 'Music', icon: Music },
-          { id: 'stt', label: 'Transcribe', icon: FileText },
-          { id: 'dubbing', label: 'Dubbing', icon: Languages },
-          { id: 'lipsync', label: 'Lip sync', icon: Film },
-          { id: 'voice_change', label: 'Changer', icon: Volume2, disabled: true },
-          { id: 'voices', label: 'Voices', icon: UserCheck },
-        ].map((item) => {
+        {RAIL_GROUPS.flatMap((g) => g.items).map((i) => ({ id: i.id, label: i.label, icon: i.icon, disabled: false })).map((item) => {
           const Icon = item.icon;
           const isActive = activeTool === item.id;
           return (
@@ -1133,106 +1175,37 @@ export const AudioPage: React.FC = () => {
         {/* ================= 1. LEFT TOOL RAIL (~200px) ================= */}
         <aside className="hidden md:flex w-[200px] shrink-0 border-r border-[var(--border-subtle)] bg-[var(--bg-1)] flex-col justify-between py-3 overflow-y-auto">
           <div className="space-y-1 px-2.5">
-            <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] block">
-              Create Sound
-            </span>
-
-            {[
-              { id: 'tts', label: 'Text to speech', icon: Mic, caption: 'Voiceover & narrations' },
-              { id: 'dialogue', label: 'Dialogue', icon: Users, caption: 'Multi-character reads' },
-              { id: 'sfx', label: 'Sound effects', icon: Sparkles, caption: 'Cinematic SFX & hits' },
-              { id: 'music', label: 'Music', icon: Music, caption: 'Original AI tracks' },
-            ].map((t) => {
-              const Icon = t.icon;
-              const isSelected = activeTool === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleSelectTool(t.id as VoiceTool)}
-                  className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-[var(--accent-soft)] text-[var(--text-primary)] font-semibold border-l-2 border-[var(--accent)]'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-2)]'
-                  }`}
-                >
-                  <Icon size={16} className={`mt-0.5 shrink-0 ${isSelected ? 'text-[var(--accent)]' : ''}`} />
-                  <div className="min-w-0">
-                    <div className="text-[13px] leading-tight truncate">{t.label}</div>
-                    <div className="text-[10px] text-[var(--text-tertiary)] truncate mt-0.5">{t.caption}</div>
-                  </div>
-                </button>
-              );
-            })}
-
-            <div className="pt-3">
-              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] block">
-                Video Audio
-              </span>
-            </div>
-
-            {[
-              { id: 'stt', label: 'Speech to text', icon: FileText, caption: 'Transcript & captions' },
-              { id: 'dubbing', label: 'Dubbing', icon: Languages, caption: 'Translate voice tone' },
-              { id: 'lipsync', label: 'Lip sync', icon: Film, caption: 'Actor mouth animation' },
-            ].map((t) => {
-              const Icon = t.icon;
-              const isSelected = activeTool === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleSelectTool(t.id as VoiceTool)}
-                  className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-[var(--accent-soft)] text-[var(--text-primary)] font-semibold border-l-2 border-[var(--accent)]'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-2)]'
-                  }`}
-                >
-                  <Icon size={16} className={`mt-0.5 shrink-0 ${isSelected ? 'text-[var(--accent)]' : ''}`} />
-                  <div className="min-w-0">
-                    <div className="text-[13px] leading-tight truncate">{t.label}</div>
-                    <div className="text-[10px] text-[var(--text-tertiary)] truncate mt-0.5">{t.caption}</div>
-                  </div>
-                </button>
-              );
-            })}
-
-            <div className="pt-3">
-              <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] block">
-                Catalog & Tools
-              </span>
-            </div>
-
-            <button
-              type="button"
-              disabled
-              className="w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 opacity-40 cursor-not-allowed text-[var(--text-tertiary)]"
-            >
-              <Volume2 size={16} className="mt-0.5 shrink-0" />
-              <div className="min-w-0">
-                <div className="text-[13px] leading-tight flex items-center justify-between">
-                  <span>Voice changer</span>
+            {RAIL_GROUPS.map((group, gi) => (
+              <React.Fragment key={group.title}>
+                <div className={gi === 0 ? '' : 'pt-3'}>
+                  <span className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] block">
+                    {group.title}
+                  </span>
                 </div>
-                <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">Not connected yet</div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectTool('voices')}
-              className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 transition-colors cursor-pointer ${
-                activeTool === 'voices'
-                  ? 'bg-[var(--accent-soft)] text-[var(--text-primary)] font-semibold border-l-2 border-[var(--accent)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-2)]'
-              }`}
-            >
-              <UserCheck size={16} className={`mt-0.5 shrink-0 ${activeTool === 'voices' ? 'text-[var(--accent)]' : ''}`} />
-              <div className="min-w-0">
-                <div className="text-[13px] leading-tight">Voices</div>
-                <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">Studio library</div>
-              </div>
-            </button>
+                {group.items.map((t) => {
+                  const Icon = t.icon;
+                  const isSelected = activeTool === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => handleSelectTool(t.id)}
+                      className={`w-full text-left px-2.5 py-2 rounded-lg flex items-start gap-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--accent-soft)] text-[var(--text-primary)] font-semibold border-l-2 border-[var(--accent)]'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-2)]'
+                      }`}
+                    >
+                      <Icon size={16} className={`mt-0.5 shrink-0 ${isSelected ? 'text-[var(--accent)]' : ''}`} />
+                      <div className="min-w-0">
+                        <div className="text-[13px] leading-tight truncate">{t.label}</div>
+                        <div className="text-[10px] text-[var(--text-tertiary)] truncate mt-0.5">{t.caption}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </div>
 
           <div className="px-3 pt-3 border-t border-[var(--border-subtle)] text-[11px] text-[var(--text-tertiary)]">
@@ -1537,91 +1510,11 @@ export const AudioPage: React.FC = () => {
           )}
 
           {/* TOOL: MUSIC */}
-          {activeTool === 'music' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="type-h2 text-[18px] text-[var(--text-primary)] font-semibold">Music</h2>
-                <p className="text-[13px] text-[var(--text-secondary)]">
-                  Compose modern high-fidelity background tracks tailored to your brand mood.
-                </p>
-              </div>
+          {activeTool === 'sfx' && <VideoSfxPanel onSubmitted={afterSubmit} />}
 
-              <div className="p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)] space-y-4">
-                <div>
-                  <label className="text-[12px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider block mb-1.5">
-                    Music Description & Style
-                  </label>
-                  <textarea
-                    value={musicPrompt}
-                    onChange={(e) => setMusicPrompt(e.target.value)}
-                    placeholder="Describe music mood... (e.g., Chill lofi beats with warm rhodes piano and crisp vinyl crackle)"
-                    rows={3}
-                    className="w-full bg-[var(--bg-3)] border border-[var(--border-subtle)] focus:border-[var(--accent)] text-[14px] text-[var(--text-primary)] p-3 rounded-[var(--radius-buttons)] outline-hidden"
-                  />
-                </div>
+          {activeTool === 'music' && <MusicPanel onSubmitted={afterSubmit} />}
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[13px]">
-                    <span className="text-[var(--text-secondary)]">Length: {musicDurationSec} seconds</span>
-                    <span className="text-[var(--text-tertiary)]">10s to 120s</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={120}
-                    step={5}
-                    value={musicDurationSec}
-                    onChange={(e) => setMusicDurationSec(parseInt(e.target.value, 10))}
-                    className="w-full accent-[var(--accent)]"
-                  />
-                  <div className="flex gap-2">
-                    {[15, 30, 60, 90].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setMusicDurationSec(s)}
-                        className={`px-2 py-0.5 rounded text-[11px] font-mono border cursor-pointer ${
-                          musicDurationSec === s
-                            ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                            : 'bg-[var(--bg-3)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
-                        }`}
-                      >
-                        {s}s
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
-                  <div>
-                    <span className="text-[13px] font-medium text-[var(--text-primary)] block">Instrumental only</span>
-                    <span className="text-[11px] text-[var(--text-secondary)]">Exclude singing or vocal chants</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={forceInstrumental}
-                    onChange={(e) => setForceInstrumental(e.target.checked)}
-                    className="w-4 h-4 accent-[var(--accent)] cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-2">
-                <Button
-                  variant="primary"
-                  size={44}
-                  disabled={actionProps.disabled}
-                  onClick={handleGenerate}
-                  className="w-full text-[14px] font-semibold"
-                >
-                  {isGenerating ? 'Generating music...' : 'Generate music'}
-                </Button>
-                <p className="text-center text-[12px] text-[var(--text-tertiary)]">
-                  Estimated cost: ≈ ${getToolCost().toFixed(2)} &bull; $0.80 per minute
-                </p>
-              </div>
-            </div>
-          )}
+          {activeTool === 'separate' && <SeparatePanel onSubmitted={afterSubmit} />}
 
           {/* TOOL: SPEECH TO TEXT (TRANSCRIPT & CAPTIONS) */}
           {activeTool === 'stt' && (
@@ -1631,6 +1524,27 @@ export const AudioPage: React.FC = () => {
                 <p className="text-[13px] text-[var(--text-secondary)]">
                   Transcribe video or audio with high precision, export subtitles, or burn captions directly into the video.
                 </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: 'stt_scribe_v2', label: 'ElevenLabs Scribe', note: 'Word timing and speakers' },
+                  { id: 'stt_wizper', label: 'Whisper (Wizper)', note: 'Cheaper, good for Swedish' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSttModel(m.id as 'stt_scribe_v2' | 'stt_wizper')}
+                    className={`text-left px-3 py-2 rounded-[var(--radius-buttons)] border cursor-pointer transition-colors ${
+                      sttModel === m.id
+                        ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-3)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
+                    }`}
+                  >
+                    <span className="block text-[12px] font-semibold">{m.label}</span>
+                    <span className="block text-[10px] text-[var(--text-tertiary)] leading-tight">{m.note}</span>
+                  </button>
+                ))}
               </div>
 
               {/* Big dropzone / Loaded Player */}
@@ -1890,6 +1804,32 @@ export const AudioPage: React.FC = () => {
           {/* TOOL: LIP SYNC */}
           {activeTool === 'lipsync' && (
             <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { id: 'video', label: 'Video lip sync', note: 'Match a video to new speech' },
+                  { id: 'photo', label: 'Talking photo', note: 'Make a still face speak' },
+                  { id: 'audio2video', label: 'Audio to video', note: 'Create a video from sound' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setLipsyncMode(m.id as 'video' | 'photo' | 'audio2video')}
+                    className={`text-left px-3 py-2 rounded-[var(--radius-buttons)] border cursor-pointer transition-colors ${
+                      lipsyncMode === m.id
+                        ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--text-primary)]'
+                        : 'bg-[var(--bg-3)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
+                    }`}
+                  >
+                    <span className="block text-[12px] font-semibold">{m.label}</span>
+                    <span className="block text-[10px] text-[var(--text-tertiary)] leading-tight">{m.note}</span>
+                  </button>
+                ))}
+              </div>
+
+              {lipsyncMode === 'photo' && <TalkingPhotoPanel onSubmitted={afterSubmit} />}
+              {lipsyncMode === 'audio2video' && <AudioToVideoPanel onSubmitted={afterSubmit} />}
+              {lipsyncMode === 'video' && (
+                <div className="space-y-4">
               <div>
                 <h2 className="type-h2 text-[18px] text-[var(--text-primary)] font-semibold">Lip sync</h2>
                 <p className="text-[13px] text-[var(--text-secondary)]">
@@ -2009,26 +1949,12 @@ export const AudioPage: React.FC = () => {
                   </p>
                 )}
               </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* TOOL: VOICE CHANGER (GREYED OUT) */}
-          {activeTool === 'voice_change' && (
-            <div className="p-12 text-center bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-[var(--radius-cards)] space-y-3">
-              <div className="w-12 h-12 rounded-full bg-[var(--bg-3)] text-[var(--text-tertiary)] flex items-center justify-center mx-auto">
-                <Volume2 size={24} />
-              </div>
-              <h3 className="type-h3 text-[16px] text-[var(--text-secondary)] font-semibold">
-                Voice Changer (Speech to speech)
-              </h3>
-              <p className="text-[13px] text-[var(--text-tertiary)] max-w-sm mx-auto">
-                Real-time voice cloning and actor voice transfer will be enabled in an upcoming schema release.
-              </p>
-              <div className="inline-block px-3 py-1 rounded-full bg-[var(--bg-3)] border border-[var(--border-subtle)] text-[11px] font-mono text-[var(--text-tertiary)]">
-                Not connected yet &bull; fal.ai
-              </div>
-            </div>
-          )}
+          {activeTool === 'voice_change' && <VoiceChangerPanel onSubmitted={afterSubmit} />}
 
           {/* TOOL: VOICES (STUDIO LIBRARY) */}
           {activeTool === 'voices' && (

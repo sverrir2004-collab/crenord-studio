@@ -489,6 +489,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               <span className="text-[11px] text-white/90 font-mono">
                 Reason: {firestoreHealth.firestoreCode || 'UNKNOWN'}
               </span>
+              {firestoreHealth.firestoreMessage && (
+                <span className="text-[11px] text-white/80 max-w-[900px] leading-snug">
+                  {firestoreHealth.firestoreMessage}
+                </span>
+              )}
+              {firestoreHealth.firestoreCode === 'PERMISSION_DENIED' && (
+                <span className="text-[11px] text-white/80 max-w-[900px] leading-snug">
+                  Login worked but Firestore rules reject the server account. Publish the rules from firestore.rules in the
+                  Firebase console (Firestore, Rules) and make sure the server e-mail in the rules matches SERVER_DB_EMAIL.
+                </span>
+              )}
             </div>
             <button
               type="button"
